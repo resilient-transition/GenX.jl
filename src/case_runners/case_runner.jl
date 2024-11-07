@@ -75,7 +75,8 @@ function run_genx_case_simple!(case::AbstractString, mysetup::Dict, optimizer::A
     myinputs = load_inputs(mysetup, case)
 
     println("Generating the Optimization Model")
-    time_elapsed = @elapsed EP = generate_model(mysetup, myinputs, OPTIMIZER)
+    EP = Model(OPTIMIZER)
+    time_elapsed = @elapsed generate_model!(EP,mysetup, myinputs)
     println("Time elapsed for model building is")
     println(time_elapsed)
 
@@ -141,8 +142,19 @@ function run_genx_case_multistage!(case::AbstractString, mysetup::Dict, optimize
     solver_name = lowercase(get(mysetup, "Solver", ""))
     OPTIMIZER = configure_solver(settings_path, optimizer; solver_name=solver_name)
 
-    model_dict = Dict()
     inputs_dict = Dict()
+
+    if mysetup["MultiStageSettingsDict"]["DDP"] == 0
+
+        multistage_graph =  OptiGraph();
+
+        set_optimizer(multistage_graph, OPTIMIZER);
+
+        @optinode(multistage_graph , model_dict[1:mysetup["MultiStageSettingsDict"]["NumStages"]])
+
+    else
+        model_dict = Dict(t=> Model() for t in 1:mysetup["MultiStageSettingsDict"]["NumStages"])
+    end
 
     for t in 1:mysetup["MultiStageSettingsDict"]["NumStages"]
 
@@ -158,47 +170,75 @@ function run_genx_case_multistage!(case::AbstractString, mysetup::Dict, optimize
             mysetup["NetworkExpansion"])
 
         compute_cumulative_min_retirements!(inputs_dict, t)
+        
         # Step 2) Generate model
-        model_dict[t] = generate_model(mysetup, inputs_dict[t], OPTIMIZER)
+                
+        generate_model!(model_dict[t],mysetup, inputs_dict[t])
+
+        set_optimizer(model_dict[t], OPTIMIZER)
+
+        discount_objective_function!(model_dict[t],mysetup,inputs_dict[t])
+        
     end
 
     # check that resources do not switch from can_retire = 0 to can_retire = 1 between stages
-    validate_can_retire_multistage(
-        inputs_dict, mysetup["MultiStageSettingsDict"]["NumStages"])
+    validate_can_retire_multistage(inputs_dict, mysetup["MultiStageSettingsDict"]["NumStages"])
+
+    if mysetup["MultiStageSettingsDict"]["DDP"] == 0
+        define_multi_stage_linking_constraints!(multistage_graph,mysetup,inputs_dict)
+
+        @objective(multistage_graph, 
+        Min, 
+        sum(model_dict[t][:eDiscountedObj] for t in 1:mysetup["MultiStageSettingsDict"]["NumStages"])
+        )
+    end
 
     ### Solve model
     println("Solving Model")
 
-    # Prepare folder for results    
-    outpath = get_default_output_folder(case)
+    # Step 3) Solve Model
 
-    if mysetup["OverwriteResults"] == 1
-        # Overwrite existing results if dir exists
-        # This is the default behaviour when there is no flag, to avoid breaking existing code
-        if !(isdir(outpath))
+    if  mysetup["MultiStageSettingsDict"]["DDP"] == 1
+        ## Run DDP Algorithm
+        model_dict, mystats_d, inputs_dict = run_ddp(outpath, model_dict, mysetup, inputs_dict)
+
+        # Prepare folder for results    
+        outpath = get_default_output_folder(case)
+
+        if mysetup["OverwriteResults"] == 1
+            # Overwrite existing results if dir exists
+            # This is the default behaviour when there is no flag, to avoid breaking existing code
+            if !(isdir(outpath))
+                mkdir(outpath)
+            end
+        else
+            # Find closest unused ouput directory name and create it
+            outpath = choose_output_dir(outpath)
             mkdir(outpath)
         end
-    else
-        # Find closest unused ouput directory name and create it
-        outpath = choose_output_dir(outpath)
-        mkdir(outpath)
-    end
 
-    # Step 3) Run DDP Algorithm
-    ## Solve Model
-    model_dict, mystats_d, inputs_dict = run_ddp(outpath, model_dict, mysetup, inputs_dict)
-
-    # Step 4) Write final outputs from each stage
-    if mysetup["MultiStageSettingsDict"]["Myopic"] == 0 ||
-       mysetup["MultiStageSettingsDict"]["WriteIntermittentOutputs"] == 0
-        for p in 1:mysetup["MultiStageSettingsDict"]["NumStages"]
-            mysetup["MultiStageSettingsDict"]["CurStage"] = p
-            outpath_cur = joinpath(outpath, "results_p$p")
-            write_outputs(model_dict[p], outpath_cur, mysetup, inputs_dict[p])
+        # Write final outputs from each stage
+        if mysetup["MultiStageSettingsDict"]["Myopic"] == 0 ||
+            mysetup["MultiStageSettingsDict"]["WriteIntermittentOutputs"] == 0
+            for p in 1:mysetup["MultiStageSettingsDict"]["NumStages"]
+                mysetup["MultiStageSettingsDict"]["CurStage"] = p
+                outpath_cur = joinpath(outpath, "results_p$p")
+                write_outputs(model_dict[p], outpath_cur, mysetup, inputs_dict[p])
+            end
         end
+ 
+        # Write multistage summary outputs
+         write_multi_stage_outputs(mystats_d, outpath, mysetup, inputs_dict)
+    else
+        optimize!(multistage_graph)
+
+        # Prepare folder for results    
+        outpath = get_default_output_folder(case)
+        
+        # Write multistage summary outputs
+        # write_outputs(multistage_graph, outpath, mysetup, inputs_dict)
     end
 
-    # Step 5) Write DDP summary outputs
 
-    write_multi_stage_outputs(mystats_d, outpath, mysetup, inputs_dict)
+    
 end
