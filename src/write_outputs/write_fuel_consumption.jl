@@ -1,23 +1,23 @@
 
 @doc raw"""
-    write_fuel_consumption(path::AbstractString, inputs::Dict, setup::Dict, EP::Model). 
+    write_fuel_consumption(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel). 
 Write fuel consumption of each power plant. 
 """
-function write_fuel_consumption(path::AbstractString, inputs::Dict, setup::Dict, EP::Model)
-    write_fuel_consumption_plant(path::AbstractString, inputs::Dict, setup::Dict, EP::Model)
+function write_fuel_consumption(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel)
+    write_fuel_consumption_plant(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel)
     if setup["WriteOutputs"] != "annual"
         write_fuel_consumption_ts(path::AbstractString,
             inputs::Dict,
             setup::Dict,
-            EP::Model)
+            EP::GenXModel)
     end
-    write_fuel_consumption_tot(path::AbstractString, inputs::Dict, setup::Dict, EP::Model)
+    write_fuel_consumption_tot(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel)
 end
 
 function write_fuel_consumption_plant(path::AbstractString,
         inputs::Dict,
         setup::Dict,
-        EP::Model)
+        EP::GenXModel)
     gen = inputs["RESOURCES"]
 
     HAS_FUEL = inputs["HAS_FUEL"]
@@ -71,7 +71,7 @@ end
 function write_fuel_consumption_ts(path::AbstractString,
         inputs::Dict,
         setup::Dict,
-        EP::Model)
+        EP::GenXModel)
     T = inputs["T"]     # Number of time steps (hours)
     HAS_FUEL = inputs["HAS_FUEL"]
 
@@ -96,7 +96,7 @@ end
 function write_fuel_consumption_tot(path::AbstractString,
         inputs::Dict,
         setup::Dict,
-        EP::Model)
+        EP::GenXModel)
     # types of fuel
     fuel_types = inputs["fuels"]
     fuel_number = length(fuel_types)

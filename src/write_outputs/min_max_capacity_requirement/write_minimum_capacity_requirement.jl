@@ -1,7 +1,7 @@
 function write_minimum_capacity_requirement(path::AbstractString,
         inputs::Dict,
         setup::Dict,
-        EP::Model)
+        EP::GenXModel)
     NumberOfMinCapReqs = inputs["NumberOfMinCapReqs"]
     dfMinCapPrice = DataFrame(
         Constraint = [Symbol("MinCapReq_$mincap")

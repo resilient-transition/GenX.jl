@@ -1,10 +1,10 @@
 @doc raw"""
-	write_virtual_discharge(path::AbstractString, inputs::Dict, setup::Dict, EP::Model)
+	write_virtual_discharge(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel)
 
 Function for writing the "virtual" discharge of each storage technology. Virtual discharge is used to
 	allow storage resources to contribute to the capacity reserve margin without actually discharging.
 """
-function write_virtual_discharge(path::AbstractString, inputs::Dict, setup::Dict, EP::Model)
+function write_virtual_discharge(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel)
     G = inputs["G"]     # Number of resources (generators, storage, DR, and DERs)
     T = inputs["T"]     # Number of time steps (hours)
     STOR_ALL = inputs["STOR_ALL"]

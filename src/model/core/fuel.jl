@@ -1,6 +1,6 @@
 
 @doc raw"""
-    fuel!(EP::Model, inputs::Dict, setup::Dict)
+    fuel!(EP::GenXModel, inputs::Dict, setup::Dict)
 
 This function creates expressions to account for total fuel consumption (e.g., coal, 
 natural gas, hydrogen, etc). It also has the capability to model heat rates that are
@@ -78,7 +78,7 @@ vMulFuels_{y, i, t} <= vPower_{y,t} \times MaxCofire_{i}
 \end{aligned}
 ```
 """
-function fuel!(EP::Model, inputs::Dict, setup::Dict)
+function fuel!(EP::GenXModel, inputs::Dict, setup::Dict)
     println("Fuel Module")
     gen = inputs["RESOURCES"]
 

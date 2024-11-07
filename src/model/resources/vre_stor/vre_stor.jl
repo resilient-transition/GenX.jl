@@ -1,5 +1,5 @@
 @doc raw"""
-	vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+	vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
 
 This module enables the modeling of 1) co-located VRE and energy storage technologies, 
 and 2) optimized interconnection sizing for VREs. Utility-scale solar PV and/or wind VRE technologies 
@@ -78,7 +78,7 @@ The second constraint with both capacity reserve margins and operating reserves 
 
 The rest of the constraints are dependent upon specific configurable components within the module and are listed below.
 """
-function vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+function vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
     println("VRE-Storage Module")
 
     ### LOAD DATA ###
@@ -350,7 +350,7 @@ function vre_stor!(EP::Model, inputs::Dict, setup::Dict)
 end
 
 @doc raw"""
-    inverter_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+    inverter_vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
 
 This function defines the decision variables, expressions, and constraints for the inverter component of each co-located VRE and storage generator.
 
@@ -421,7 +421,7 @@ In addition, this function adds investment and fixed O&M related costs related t
 \end{aligned}
 ```
 """
-function inverter_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+function inverter_vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
     println("VRE-STOR Inverter Module")
 
     ### LOAD DATA ###
@@ -518,7 +518,7 @@ function inverter_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
 end
 
 @doc raw"""
-    solar_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+    solar_vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
 
 This function defines the decision variables, expressions, and constraints for the solar PV component of each co-located VRE and storage generator.
 
@@ -580,7 +580,7 @@ In addition, this function adds investment, fixed O&M, and variable O&M costs re
 \end{aligned}
 ```
 """
-function solar_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+function solar_vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
     println("VRE-STOR Solar Module")
 
     ### LOAD DATA ###
@@ -695,7 +695,7 @@ function solar_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
 end
 
 @doc raw"""
-    wind_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+    wind_vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
 
 This function defines the decision variables, expressions, and constraints for the wind component of each co-located VRE and storage generator.
 
@@ -757,7 +757,7 @@ In addition, this function adds investment, fixed O&M, and variable O&M costs re
 \end{aligned}
 ```
 """
-function wind_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+function wind_vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
     println("VRE-STOR Wind Module")
 
     ### LOAD DATA ###
@@ -871,7 +871,7 @@ function wind_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
 end
 
 @doc raw"""
-    stor_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+    stor_vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
 
 This function defines the decision variables, expressions, and constraints for the storage component of each co-located VRE and storage generator.
     A wide range of energy storage devices (all $y \in \mathcal{VS}^{stor}$) can be modeled in GenX, using one of two generic storage formulations: 
@@ -996,7 +996,7 @@ In addition, this function adds investment, fixed O&M, and variable O&M costs re
 \end{aligned}
 ```
 """
-function stor_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+function stor_vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
     println("VRE-STOR Storage Module")
 
     ### LOAD DATA ###
@@ -1289,7 +1289,7 @@ function stor_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
 end
 
 @doc raw"""
-    elec_vre_stor!(EP::Model, inputs::Dict)
+    elec_vre_stor!(EP::GenXModel, inputs::Dict)
 
 This function defines the decision variables, expressions, and constraints for the electrolyzer component of each co-located ELC, VRE, and storage generator.
     
@@ -1348,7 +1348,7 @@ In constraint 3, electrolyzers are bound by the following limits on maximum and 
 ```
 The regional demand requirement is included in electrolyzer.jl
 """
-function elec_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+function elec_vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
     println("VRE-STOR Electrolyzer Module")
 
     ### LOAD DATA ###
@@ -1478,7 +1478,7 @@ function elec_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
 end
 
 @doc raw"""
-    lds_vre_stor!(EP::Model, inputs::Dict)
+    lds_vre_stor!(EP::GenXModel, inputs::Dict)
 
 This function defines the decision variables, expressions, and constraints for any 
     long duration energy storage component of each co-located VRE and storage generator (
@@ -1501,7 +1501,7 @@ The rest of the long duration energy storage constraints are copied and applied 
     long duration energy storage resources $y \in \mathcal{VS}^{LDES}$ from the long-duration storage module. Capacity reserve margin constraints for 
     long duration energy storage resources are further elaborated upon in ```vre_stor_capres!()```.
 """
-function lds_vre_stor!(EP::Model, inputs::Dict)
+function lds_vre_stor!(EP::GenXModel, inputs::Dict)
     println("VRE-STOR LDS Module")
 
     ### LOAD DATA ###
@@ -1597,7 +1597,7 @@ function lds_vre_stor!(EP::Model, inputs::Dict)
 end
 
 @doc raw"""
-    investment_charge_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+    investment_charge_vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
 
 This function activates the decision variables and constraints for asymmetric storage resources (independent charge
     and discharge power capacities (any STOR flag = 2)). For asymmetric storage resources, the function is enabled so charging 
@@ -1720,7 +1720,7 @@ In addition, this function adds investment and fixed O&M costs related to charge
 \end{aligned}
 ```
 """
-function investment_charge_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
+function investment_charge_vre_stor!(EP::GenXModel, inputs::Dict, setup::Dict)
     println("VRE-STOR Charge Investment Module")
 
     ### LOAD INPUTS ###
@@ -2144,7 +2144,7 @@ function investment_charge_vre_stor!(EP::Model, inputs::Dict, setup::Dict)
 end
 
 @doc raw"""
-    vre_stor_capres!(EP::Model, inputs::Dict, setup::Dict)
+    vre_stor_capres!(EP::GenXModel, inputs::Dict, setup::Dict)
 
 This function activates capacity reserve margin constraints for co-located VRE and storage resources. The capacity reserve margin 
     formulation for GenX is further elaborated upon in ```cap_reserve_margin!()```. For co-located resources ($y \in \mathcal{VS}$), 
@@ -2216,7 +2216,7 @@ If long duration energy storage resources exist, a separate but similar set of v
 All other constraints are identical to those used to track the actual state of charge, except with the new variables for the representation of 'virtual' 
     state of charge, build up storage inventory and state of charge at the beginning of each period. 
 """
-function vre_stor_capres!(EP::Model, inputs::Dict, setup::Dict)
+function vre_stor_capres!(EP::GenXModel, inputs::Dict, setup::Dict)
     println("VRE-STOR Capacity Reserve Margin Module")
 
     ### LOAD DATA ###
@@ -2569,7 +2569,7 @@ function vre_stor_capres!(EP::Model, inputs::Dict, setup::Dict)
 end
 
 @doc raw"""
-    vre_stor_operational_reserves!(EP::Model, inputs::Dict, setup::Dict)
+    vre_stor_operational_reserves!(EP::GenXModel, inputs::Dict, setup::Dict)
 
 This function activates either or both frequency regulation and operating reserve options for co-located 
     VRE-storage resources. Co-located VRE and storage resources ($y \in \mathcal{VS}$) have six pairs of 
@@ -2649,7 +2649,7 @@ Lastly, if the co-located resource has a variable renewable energy component, th
 \end{aligned}
 ```
 """
-function vre_stor_operational_reserves!(EP::Model, inputs::Dict, setup::Dict)
+function vre_stor_operational_reserves!(EP::GenXModel, inputs::Dict, setup::Dict)
     println("VRE-STOR Operational Reserves Module")
 
     ### LOAD DATA & CREATE SETS ###

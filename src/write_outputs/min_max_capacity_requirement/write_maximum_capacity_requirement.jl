@@ -1,7 +1,7 @@
 function write_maximum_capacity_requirement(path::AbstractString,
         inputs::Dict,
         setup::Dict,
-        EP::Model)
+        EP::GenXModel)
     NumberOfMaxCapReqs = inputs["NumberOfMaxCapReqs"]
     dfMaxCapPrice = DataFrame(
         Constraint = [Symbol("MaxCapReq_$maxcap")

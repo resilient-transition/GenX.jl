@@ -1,5 +1,5 @@
 @doc raw"""
-	long_duration_storage!(EP::Model, inputs::Dict, setup::Dict)
+	long_duration_storage!(EP::GenXModel, inputs::Dict, setup::Dict)
 This function creates variables and constraints enabling modeling of long duration storage resources when modeling representative time periods.\
 
 **Storage inventory balance at beginning of each representative period**
@@ -57,7 +57,7 @@ If the capacity reserve margin constraint is enabled, a similar set of constrain
 ```
 All other constraints are identical to those used to track the actual state of charge, except with the new variables $Q^{CRM}_{o,z,n}$ and $\Delta Q^{CRM}_{o,z,n}$ used in place of $Q_{o,z,n}$ and $\Delta Q_{o,z,n}$, respectively.
 """
-function long_duration_storage!(EP::Model, inputs::Dict, setup::Dict)
+function long_duration_storage!(EP::GenXModel, inputs::Dict, setup::Dict)
     println("Long Duration Storage Module")
 
     gen = inputs["RESOURCES"]

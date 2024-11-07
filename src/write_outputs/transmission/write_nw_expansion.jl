@@ -1,4 +1,4 @@
-function write_nw_expansion(path::AbstractString, inputs::Dict, setup::Dict, EP::Model)
+function write_nw_expansion(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel)
     L = inputs["L"]     # Number of transmission lines
 
     # Transmission network reinforcements

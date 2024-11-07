@@ -3,13 +3,13 @@
 ###### ###### ###### ###### ###### ######
 
 # Single element version
-function create_empty_expression!(EP::Model, exprname::Symbol)
+function create_empty_expression!(EP::GenXModel, exprname::Symbol)
     EP[exprname] = AffExpr(0.0)
     return nothing
 end
 
 # Vector version, to avoid needing to wrap the dimension in a tuple or array
-function create_empty_expression!(EP::Model, exprname::Symbol, dim1::Int64)
+function create_empty_expression!(EP::GenXModel, exprname::Symbol, dim1::Int64)
     temp = Array{AffExpr}(undef, dim1)
     fill_with_zeros!(temp)
     EP[exprname] = temp
@@ -17,7 +17,7 @@ function create_empty_expression!(EP::Model, exprname::Symbol, dim1::Int64)
 end
 
 @doc raw"""
-    create_empty_expression!(EP::Model, exprname::Symbol, dims::NTuple{N, Int64}) where N
+    create_empty_expression!(EP::GenXModel, exprname::Symbol, dims::NTuple{N, Int64}) where N
 
 Create an dense array filled with zeros which can be altered later.
 Other approaches to creating zero-filled arrays will often return an array of floats, not expressions.
@@ -25,7 +25,7 @@ This can lead to errors later if a method can only operate on expressions.
     
 We don't currently have a method to do this with non-contiguous indexing.
 """
-function create_empty_expression!(EP::Model,
+function create_empty_expression!(EP::GenXModel,
         exprname::Symbol,
         dims::NTuple{N, Int64}) where {N}
     temp = Array{AffExpr}(undef, dims)
@@ -35,7 +35,7 @@ function create_empty_expression!(EP::Model,
 end
 
 # Version with the dimensions wrapped in an array. This requires slightly more memory than using tuples
-function create_empty_expression!(EP::Model, exprname::Symbol, dims::Vector{Int64})
+function create_empty_expression!(EP::GenXModel, exprname::Symbol, dims::Vector{Int64})
     temp = Array{AffExpr}(undef, dims...)
     fill_with_zeros!(temp)
     EP[exprname] = temp
