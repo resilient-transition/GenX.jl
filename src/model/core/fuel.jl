@@ -300,19 +300,19 @@ function fuel!(EP::GenXModel, inputs::Dict, setup::Dict)
                         MULTI_FUELS),
                     t = 1:T],
                 sum(EP[:vMulFuels][y, i, t] / heat_rates[i][y] for i in 1:max_fuels) -
-                EP[:vP][y, t].==0)
+                EP[:vP][y, t]==0)
         end
     end
 
     # constraints on start up fuel use
     @constraint(EP, cStartFuel_single[y in intersect(THERM_COMMIT, SINGLE_FUEL), t = 1:T],
         EP[:vStartFuel][y, t] -
-        (cap_size(gen[y]) * EP[:vSTART][y, t] * start_fuel_mmbtu_per_mw(gen[y])).==0)
+        (cap_size(gen[y]) * EP[:vSTART][y, t] * start_fuel_mmbtu_per_mw(gen[y]))==0)
     if !isempty(MULTI_FUELS)
         @constraint(EP,
             cStartFuel_multi[y in intersect(THERM_COMMIT, MULTI_FUELS), t = 1:T],
             sum(EP[:vMulStartFuels][y, i, t] for i in 1:max_fuels) -
-            (cap_size(gen[y]) * EP[:vSTART][y, t] * start_fuel_mmbtu_per_mw(gen[y])).==0)
+            (cap_size(gen[y]) * EP[:vSTART][y, t] * start_fuel_mmbtu_per_mw(gen[y]))==0)
     end
 
     # constraints on co-fire ratio of different fuels used by one generator
