@@ -240,3 +240,10 @@ function configure_ddp_dicts(setup::Dict, inputs::Dict)
 
     return start_cap_d, cap_track_d
 end
+function JuMP.has_duals(model::Plasmo.OptiNode; result::Int = 1)
+    return has_duals(model.source_graph[]; result = result)
+end
+
+function Plasmo.termination_status(EP::Plasmo.OptiNode)
+    return termination_status(EP.source_graph[])
+end
