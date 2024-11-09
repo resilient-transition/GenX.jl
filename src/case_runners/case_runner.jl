@@ -198,27 +198,27 @@ function run_genx_case_multistage!(case::AbstractString, mysetup::Dict, optimize
 
     # Step 3) Solve Model
 
+    # Prepare folder for results    
+    outpath = get_default_output_folder(case)
+    if mysetup["OverwriteResults"] == 1
+        # Overwrite existing results if dir exists
+        # This is the default behaviour when there is no flag, to avoid breaking existing code
+        if !(isdir(outpath))
+            mkdir(outpath)
+        end
+    else
+        # Find closest unused ouput directory name and create it
+        outpath = choose_output_dir(outpath)
+        mkdir(outpath)
+    end
+
     if  mysetup["MultiStageSettingsDict"]["DDP"] == 1
         ## Run DDP Algorithm
         model_dict, mystats_d, inputs_dict = run_ddp(outpath, model_dict, mysetup, inputs_dict)
 
-        # Prepare folder for results    
-        outpath = get_default_output_folder(case)
-
-        if mysetup["OverwriteResults"] == 1
-            # Overwrite existing results if dir exists
-            # This is the default behaviour when there is no flag, to avoid breaking existing code
-            if !(isdir(outpath))
-                mkdir(outpath)
-            end
-        else
-            # Find closest unused ouput directory name and create it
-            outpath = choose_output_dir(outpath)
-            mkdir(outpath)
-        end
-
         # Write final outputs from each stage
-        if mysetup["MultiStageSettingsDict"]["Myopic"] == 0 ||
+        myopic = mysetup["MultiStageSettingsDict"]["Myopic"] == 1
+        if !myopic ||
             mysetup["MultiStageSettingsDict"]["WriteIntermittentOutputs"] == 0
             for p in 1:mysetup["MultiStageSettingsDict"]["NumStages"]
                 mysetup["MultiStageSettingsDict"]["CurStage"] = p
@@ -228,7 +228,10 @@ function run_genx_case_multistage!(case::AbstractString, mysetup::Dict, optimize
         end
  
         # Write multistage summary outputs
-         write_multi_stage_outputs(mystats_d, outpath, mysetup, inputs_dict)
+        write_multi_stage_outputs(outpath, mysetup, inputs_dict)
+
+        # write stats 
+        !myopic && write_multi_stage_stats(outpath, mystats_d)
     else
         optimize!(multistage_graph)
 
