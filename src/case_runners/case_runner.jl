@@ -238,8 +238,8 @@ function run_genx_case_multistage!(case::AbstractString, mysetup::Dict, optimize
         # Prepare folder for results    
         outpath = get_default_output_folder(case)
         
-        # Write multistage summary outputs
-        # write_outputs(multistage_graph, outpath, mysetup, inputs_dict)
+        # Write outputs for the multistage graph
+        write_outputs(multistage_graph, outpath, mysetup, inputs_dict)
     end
 
 
