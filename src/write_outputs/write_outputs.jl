@@ -485,6 +485,9 @@ function write_outputs(EP::GenXModel, path::AbstractString, setup::Dict, inputs:
 end # END output()
 
 function write_outputs(optigraph::Plasmo.OptiGraph, path::AbstractString, setup::Dict, inputs::Dict)
+    # Write status for the multistage graph
+    setup["WriteOutputsSettingsDict"]["WriteStatus"] && write_status(path, inputs, setup, optigraph)
+
     # loop over each optinode in multistage_graph and write outputs
     for (i, optinode) in enumerate(all_nodes(optigraph))
         setup["MultiStageSettingsDict"]["CurStage"] = i

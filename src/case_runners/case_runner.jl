@@ -233,10 +233,9 @@ function run_genx_case_multistage!(case::AbstractString, mysetup::Dict, optimize
         # write stats 
         !myopic && write_multi_stage_stats(outpath, mystats_d)
     else
+        solver_start_time = time()
         optimize!(multistage_graph)
-
-        # Prepare folder for results    
-        outpath = get_default_output_folder(case)
+        inputs_dict["solve_time"] = time() - solver_start_time
         
         # Write outputs for the multistage graph
         write_outputs(multistage_graph, outpath, mysetup, inputs_dict)
