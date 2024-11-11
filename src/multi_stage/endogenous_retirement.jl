@@ -66,7 +66,7 @@ function compute_cumulative_min_retirements!(inputs_d::Dict, t::Int)
     end
 end
 
-function endogenous_retirement!(EP::GenXModel, inputs::Dict, setup::Dict)
+function endogenous_retirement!(EP::AbstractModel, inputs::Dict, setup::Dict)
     multi_stage_settings = setup["MultiStageSettingsDict"]
 
     println("Endogenous Retirement Module")
@@ -161,7 +161,7 @@ function endogenous_retirement!(EP::GenXModel, inputs::Dict, setup::Dict)
 end
 
 @doc raw"""
-	endogenous_retirement_discharge!(EP::GenXModel, inputs::Dict, num_stages::Int, cur_stage::Int, stage_lens::Array{Int, 1})
+	endogenous_retirement_discharge!(EP::AbstractModel, inputs::Dict, num_stages::Int, cur_stage::Int, stage_lens::Array{Int, 1})
 
 This function models the following constraint
 
@@ -178,7 +178,7 @@ In other words, it is the largest index $r \in \{1, ..., (p-1)\}$ such that:
 \end{aligned}
 ```
 """
-function endogenous_retirement_discharge!(EP::GenXModel,
+function endogenous_retirement_discharge!(EP::AbstractModel,
         inputs::Dict,
         num_stages::Int,
         cur_stage::Int,
@@ -266,7 +266,7 @@ function endogenous_retirement_discharge!(EP::GenXModel,
         eNewCapTrack[y] + eMinRetCapTrack[y]<=eLifetimeRetRHS[y])
 end
 
-function endogenous_retirement_charge!(EP::GenXModel,
+function endogenous_retirement_charge!(EP::AbstractModel,
         inputs::Dict,
         num_stages::Int,
         cur_stage::Int,
@@ -332,7 +332,7 @@ function endogenous_retirement_charge!(EP::GenXModel,
         eNewCapTrackCharge[y] + eMinRetCapTrackCharge[y]<=eRetCapTrackCharge[y])
 end
 
-function endogenous_retirement_energy!(EP::GenXModel,
+function endogenous_retirement_energy!(EP::AbstractModel,
         inputs::Dict,
         num_stages::Int,
         cur_stage::Int,
@@ -398,7 +398,7 @@ function endogenous_retirement_energy!(EP::GenXModel,
         eNewCapTrackEnergy[y] + eMinRetCapTrackEnergy[y]<=eRetCapTrackEnergy[y])
 end
 
-function endogenous_retirement_vre_stor_dc!(EP::GenXModel,
+function endogenous_retirement_vre_stor_dc!(EP::AbstractModel,
         inputs::Dict,
         num_stages::Int,
         cur_stage::Int,
@@ -464,7 +464,7 @@ function endogenous_retirement_vre_stor_dc!(EP::GenXModel,
         eNewCapTrackDC[y] + eMinRetCapTrackDC[y]<=eRetCapTrackDC[y])
 end
 
-function endogenous_retirement_vre_stor_solar!(EP::GenXModel,
+function endogenous_retirement_vre_stor_solar!(EP::AbstractModel,
         inputs::Dict,
         num_stages::Int,
         cur_stage::Int,
@@ -530,7 +530,7 @@ function endogenous_retirement_vre_stor_solar!(EP::GenXModel,
         eNewCapTrackSolar[y] + eMinRetCapTrackSolar[y]<=eRetCapTrackSolar[y])
 end
 
-function endogenous_retirement_vre_stor_wind!(EP::GenXModel,
+function endogenous_retirement_vre_stor_wind!(EP::AbstractModel,
         inputs::Dict,
         num_stages::Int,
         cur_stage::Int,
@@ -596,7 +596,7 @@ function endogenous_retirement_vre_stor_wind!(EP::GenXModel,
         eNewCapTrackWind[y] + eMinRetCapTrackWind[y]<=eRetCapTrackWind[y])
 end
 
-function endogenous_retirement_vre_stor_elec!(EP::GenXModel,
+function endogenous_retirement_vre_stor_elec!(EP::AbstractModel,
         inputs::Dict,
         num_stages::Int,
         cur_stage::Int,
@@ -655,7 +655,7 @@ function endogenous_retirement_vre_stor_elec!(EP::GenXModel,
 end
 
 function endogenous_retirement_vre_stor_stor!(
-        EP::GenXModel, inputs::Dict, num_stages::Int, cur_stage::Int, stage_lens::Array{Int, 1})
+        EP::AbstractModel, inputs::Dict, num_stages::Int, cur_stage::Int, stage_lens::Array{Int, 1})
     println("Endogenous Retirement (VRE-Storage Storage) Module")
 
     gen = inputs["RESOURCES"]
@@ -717,7 +717,7 @@ function endogenous_retirement_vre_stor_stor!(
         eNewCapTrackEnergy_VS[y] + eMinRetCapTrackEnergy_VS[y]<=eRetCapTrackEnergy_VS[y])
 end
 
-function endogenous_retirement_vre_stor_discharge_dc!(EP::GenXModel,
+function endogenous_retirement_vre_stor_discharge_dc!(EP::AbstractModel,
         inputs::Dict,
         num_stages::Int,
         cur_stage::Int,
@@ -786,7 +786,7 @@ function endogenous_retirement_vre_stor_discharge_dc!(EP::GenXModel,
         eMinRetCapTrackDischargeDC[y]<=eRetCapTrackDischargeDC[y])
 end
 
-function endogenous_retirement_vre_stor_charge_dc!(EP::GenXModel,
+function endogenous_retirement_vre_stor_charge_dc!(EP::AbstractModel,
         inputs::Dict,
         num_stages::Int,
         cur_stage::Int,
@@ -851,7 +851,7 @@ function endogenous_retirement_vre_stor_charge_dc!(EP::GenXModel,
         eNewCapTrackChargeDC[y] + eMinRetCapTrackChargeDC[y]<=eRetCapTrackChargeDC[y])
 end
 
-function endogenous_retirement_vre_stor_discharge_ac!(EP::GenXModel,
+function endogenous_retirement_vre_stor_discharge_ac!(EP::AbstractModel,
         inputs::Dict,
         num_stages::Int,
         cur_stage::Int,
@@ -919,7 +919,7 @@ function endogenous_retirement_vre_stor_discharge_ac!(EP::GenXModel,
         eMinRetCapTrackDischargeAC[y]<=eRetCapTrackDischargeAC[y])
 end
 
-function endogenous_retirement_vre_stor_charge_ac!(EP::GenXModel,
+function endogenous_retirement_vre_stor_charge_ac!(EP::AbstractModel,
         inputs::Dict,
         num_stages::Int,
         cur_stage::Int,

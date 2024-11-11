@@ -1,4 +1,4 @@
-function define_multi_stage_linking_constraints!(graph::OptiGraph,setup::Dict,inputs::Dict)
+function define_multi_stage_linking_constraints!(graph::Plasmo.OptiGraph,setup::Dict,inputs::Dict)
     
     start_cap_d, cap_track_d = configure_ddp_dicts(setup, inputs[1])
 
@@ -65,7 +65,7 @@ function define_multi_stage_linking_constraints!(graph::OptiGraph,setup::Dict,in
 end
 
 @doc raw"""
-	discount_objective_function!(EP::GenXModel, settings_d::Dict, inputs::Dict)
+	discount_objective_function!(EP::AbstractModel, settings_d::Dict, inputs::Dict)
 This function scales the model objective function so that costs are consistent with multi-stage modeling and introduces a cost-to-go function variable to the objective function.
 
     The updated objective function $OBJ^{*}$ returned by this method takes the form:
@@ -90,7 +90,7 @@ This function scales the model objective function so that costs are consistent w
     ```
     Note that although the objective function contains investment costs, which occur only once and thus do not need to be scaled by OPEXMULT, these costs are multiplied by a factor of $\frac{1}{WACC}$ before being added to the objective function in investment\_discharge\_multi\_stage(), investment\_charge\_multi\_stage(), investment\_energy\_multi\_stage(), and transmission\_multi\_stage(). Thus, this step scales these costs back to their correct value.
 """    
-function discount_objective_function!(EP::GenXModel, settings::Dict, inputs::Dict)
+function discount_objective_function!(EP::AbstractModel, settings::Dict, inputs::Dict)
     settings_d = settings["MultiStageSettingsDict"]
     cur_stage = settings_d["CurStage"] # Current DDP Investment Planning Stage
     cum_years = 0

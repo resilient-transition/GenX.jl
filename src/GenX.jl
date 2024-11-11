@@ -53,11 +53,6 @@ An abstract type that should be subtyped for users creating GenX resources.
 """
 abstract type AbstractResource end
 
-""" 
-Union type for the GenX model 
-"""
-const GenXModel = Union{Plasmo.OptiNode,JuMP.Model};
-
 # thanks, ChatGPT
 function include_all_in_folder(folder)
     base_path = joinpath(@__DIR__, folder)

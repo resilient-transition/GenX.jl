@@ -1,18 +1,18 @@
 @doc raw"""
-	write_co2(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel)
+	write_co2(path::AbstractString, inputs::Dict, setup::Dict, EP::AbstractModel)
 
 Function for reporting time-dependent CO2 emissions by zone.
 
 """
-function write_co2(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel)
-    write_co2_emissions_plant(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel)
-    write_co2_capture_plant(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel)
+function write_co2(path::AbstractString, inputs::Dict, setup::Dict, EP::AbstractModel)
+    write_co2_emissions_plant(path::AbstractString, inputs::Dict, setup::Dict, EP::AbstractModel)
+    write_co2_capture_plant(path::AbstractString, inputs::Dict, setup::Dict, EP::AbstractModel)
 end
 
 function write_co2_emissions_plant(path::AbstractString,
         inputs::Dict,
         setup::Dict,
-        EP::GenXModel)
+        EP::AbstractModel)
 
     gen = inputs["RESOURCES"]  # Resources (objects)
     resources = inputs["RESOURCE_NAMES"] # Resource names
@@ -35,7 +35,7 @@ function write_co2_emissions_plant(path::AbstractString,
     return nothing
 end
 
-function write_co2_capture_plant(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel)
+function write_co2_capture_plant(path::AbstractString, inputs::Dict, setup::Dict, EP::AbstractModel)
     gen = inputs["RESOURCES"]   # Resources (objects)
     CCS = inputs["CCS"]
 

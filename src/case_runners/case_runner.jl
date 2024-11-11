@@ -146,7 +146,7 @@ function run_genx_case_multistage!(case::AbstractString, mysetup::Dict, optimize
 
     if mysetup["MultiStageSettingsDict"]["DDP"] == 0
 
-        multistage_graph =  OptiGraph();
+        multistage_graph =  Plasmo.OptiGraph();
 
         set_optimizer(multistage_graph, OPTIMIZER);
 

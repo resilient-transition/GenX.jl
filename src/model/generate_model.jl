@@ -67,7 +67,7 @@ The power balance constraint of the model ensures that electricity demand is met
 # Returns
 - nothing: The GenX model is modified in place adding all variables and constraints
 """
-function generate_model!(EP::GenXModel,setup::Dict, inputs::Dict)
+function generate_model!(EP::AbstractModel,setup::Dict, inputs::Dict)
     T = inputs["T"]     # Number of time steps (hours)
     Z = inputs["Z"]     # Number of zones
 

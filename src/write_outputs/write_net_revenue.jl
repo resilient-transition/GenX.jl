@@ -1,12 +1,12 @@
 @doc raw"""
-	write_net_revenue(path::AbstractString, inputs::Dict, setup::Dict, EP::GenXModel, dfCap::DataFrame, dfESRRev::DataFrame, dfResRevenue::DataFrame, dfChargingcost::DataFrame, dfPower::DataFrame, dfEnergyRevenue::DataFrame, dfSubRevenue::DataFrame, dfRegSubRevenue::DataFrame, dfVreStor::DataFrame, dfOpRegRevenue::DataFrame, dfOpRsvRevenue::DataFrame)
+	write_net_revenue(path::AbstractString, inputs::Dict, setup::Dict, EP::AbstractModel, dfCap::DataFrame, dfESRRev::DataFrame, dfResRevenue::DataFrame, dfChargingcost::DataFrame, dfPower::DataFrame, dfEnergyRevenue::DataFrame, dfSubRevenue::DataFrame, dfRegSubRevenue::DataFrame, dfVreStor::DataFrame, dfOpRegRevenue::DataFrame, dfOpRsvRevenue::DataFrame)
 
 Function for writing net revenue of different generation technologies.
 """
 function write_net_revenue(path::AbstractString,
         inputs::Dict,
         setup::Dict,
-        EP::GenXModel,
+        EP::AbstractModel,
         dfCap::DataFrame,
         dfESRRev::DataFrame,
         dfResRevenue::DataFrame,

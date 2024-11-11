@@ -1,5 +1,5 @@
 @doc raw"""
-	hydro_inter_period_linkage!(EP::GenXModel, inputs::Dict)
+	hydro_inter_period_linkage!(EP::AbstractModel, inputs::Dict)
 This function creates variables and constraints enabling modeling of long duration storage resources when modeling representative time periods.
 
 **Storage inventory balance at beginning of each representative period**
@@ -43,7 +43,7 @@ Finally, the next constraint enforces that the initial storage level for each in
 \end{aligned}
 ```
 """
-function hydro_inter_period_linkage!(EP::GenXModel, inputs::Dict)
+function hydro_inter_period_linkage!(EP::AbstractModel, inputs::Dict)
     println("Long Duration Storage Module for Hydro Reservoir")
 
     gen = inputs["RESOURCES"]
