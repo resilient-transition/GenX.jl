@@ -220,7 +220,7 @@ function endogenous_retirement_discharge!(EP::Model,
     @expression(EP,
         eNewCapTrack[y in RET_CAP],
         sum(EP[:vCAPTRACK][y, p]
-        for p in 1:get_retirement_stage(cur_stage, lifetime(gen[y]), stage_lens)))
+        for p in 1:get_retirement_stage(cur_stage, Int(floor(lifetime(gen[y]))), stage_lens)))
     @expression(EP, eMinRetCapTrack[y in RET_CAP],
         if y in COMMIT
             cum_min_retired_cap_mw(gen[y]) / cap_size(gen[y])
@@ -368,7 +368,7 @@ function endogenous_retirement_energy!(EP::Model,
     @expression(EP,
         eNewCapTrackEnergy[y in RET_CAP_ENERGY],
         sum(EP[:vCAPTRACKENERGY][y, p]
-        for p in 1:get_retirement_stage(cur_stage, lifetime(gen[y]), stage_lens)))
+        for p in 1:get_retirement_stage(cur_stage, Int(floor(lifetime(gen[y]))), stage_lens)))
     @expression(EP,
         eMinRetCapTrackEnergy[y in RET_CAP_ENERGY],
         cum_min_retired_energy_cap_mw(gen[y]))
