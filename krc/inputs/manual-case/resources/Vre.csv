@@ -1,15 +1,15 @@
-resource,zone,region,existing_cap_mw,can_retire,new_build,inv_cost_per_mwyr,min_cap_mw,max_cap_mw,fuel,var_om_cost_per_mwh,fixed_om_cost_per_mwyr,num_vre_bins,reg_max,reg_cost,rsv_max,rsv_cost
-Solar:0,1,KY,289.3,FALSE,FALSE,0,0,0,None,0,0,1,0,0,0,0
-Wind:0,1,KY,0.09,FALSE,FALSE,0,0,0,None,0,0,1,0,0,0,0
-Wind - New Generic:0,1,KY,0,FALSE,TRUE,72674,0,1942.11,None,0,40975,1,0,0,0,0
-Wind - New Generic:1,1,KY,0,FALSE,TRUE,74280,0,896.4,None,0,40975,1,0,0,0,0
-Wind - New Generic:2,1,KY,0,FALSE,TRUE,77701,0,2129.4,None,0,40975,1,0,0,0,0
-Wind - New Generic:3,1,KY,0,FALSE,TRUE,84727,0,1616.8,None,0,40975,1,0,0,0,0
-Wind - New Generic:4,1,KY,0,FALSE,TRUE,84006,0,2422.1,None,0,40975,1,0,0,0,0
-Wind - New Generic:5,1,KY,0,FALSE,TRUE,86618,0,979.7,None,0,40975,1,0,0,0,0
-Solar - New Generic:0,1,KY,0,FALSE,TRUE,49681,0,36829.2,None,0,18165,1,0,0,0,0
-Solar - New Generic:1,1,KY,0,FALSE,TRUE,50312,0,58598.6,None,0,18165,1,0,0,0,0
-Solar - New Generic:2,1,KY,0,FALSE,TRUE,57771,0,39958.3,None,0,18165,1,0,0,0,0
-Solar - New Generic:3,1,KY,0,FALSE,TRUE,58424,0,73468.1,None,0,18165,1,0,0,0,0
-Solar - New Generic:4,1,KY,0,FALSE,TRUE,63532,0,71342.2,None,0,18165,1,0,0,0,0
-Solar - New Generic:5,1,KY,0,FALSE,TRUE,66895,0,21958.8,None,0,18165,1,0,0,0,0
+resource,zone,region,existing_cap_mw,can_retire,new_build,inv_cost_per_mwyr,min_cap_mw,max_cap_mw,fuel,var_om_cost_per_mwh,fixed_om_cost_per_mwyr,num_vre_bins,reg_max,reg_cost,rsv_max,rsv_cost,cluster
+Solar:0,1,KY,289.3,FALSE,FALSE,0,0,0,None,0,0,1,0,0,0,0,1
+Wind:0,1,KY,0.09,FALSE,FALSE,0,0,0,None,0,0,1,0,0,0,0,1
+Wind - New Generic:0,1,KY,0,FALSE,TRUE,72674,0,1942.11,None,0,40975,1,0,0,0,0,1
+Wind - New Generic:1,1,KY,0,FALSE,TRUE,74280,0,896.4,None,0,40975,1,0,0,0,0,1
+Wind - New Generic:2,1,KY,0,FALSE,TRUE,77701,0,2129.4,None,0,40975,1,0,0,0,0,1
+Wind - New Generic:3,1,KY,0,FALSE,TRUE,84727,0,1616.8,None,0,40975,1,0,0,0,0,1
+Wind - New Generic:4,1,KY,0,FALSE,TRUE,84006,0,2422.1,None,0,40975,1,0,0,0,0,1
+Wind - New Generic:5,1,KY,0,FALSE,TRUE,86618,0,979.7,None,0,40975,1,0,0,0,0,1
+Solar - New Generic:0,1,KY,0,FALSE,TRUE,49681,0,36829.2,None,0,18165,1,0,0,0,0,1
+Solar - New Generic:1,1,KY,0,FALSE,TRUE,50312,0,58598.6,None,0,18165,1,0,0,0,0,1
+Solar - New Generic:2,1,KY,0,FALSE,TRUE,57771,0,39958.3,None,0,18165,1,0,0,0,0,1
+Solar - New Generic:3,1,KY,0,FALSE,TRUE,58424,0,73468.1,None,0,18165,1,0,0,0,0,1
+Solar - New Generic:4,1,KY,0,FALSE,TRUE,63532,0,71342.2,None,0,18165,1,0,0,0,0,1
+Solar - New Generic:5,1,KY,0,FALSE,TRUE,66895,0,21958.8,None,0,18165,1,0,0,0,0,1
