@@ -1,0 +1,6 @@
+{
+    "julia.debuggerDefaultCompiled": [    
+        "ALL_MODULES_EXCEPT_MAIN",
+        "-GenX.",
+    ]
+}
