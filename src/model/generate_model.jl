@@ -230,6 +230,11 @@ function generate_model(setup::Dict, inputs::Dict, OPTIMIZER::MOI.OptimizerWithA
         cap_reserve_margin!(EP, inputs, setup)
     end
 
+    #ELCC version of capacity reserve margin
+    if haskey(setup,"CapResELCC") && (setup["CapResELCC"] == 1)
+        capres_ELCC!(EP, inputs, setup)
+    end
+
     if (setup["MinCapReq"] == 1)
         minimum_capacity_requirement!(EP, inputs, setup)
     end
