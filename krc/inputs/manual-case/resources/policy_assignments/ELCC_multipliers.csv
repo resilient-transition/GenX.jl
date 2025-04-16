@@ -1,0 +1,15 @@
+ELCC_Surface,Resource,ELCC_Axis_Index,ELCC_Axis_Multiplier
+VRE_Example,Solar:0,1,1
+VRE_Example,Wind:0,1,1
+VRE_Example,Wind - New Generic:0,1,1
+VRE_Example,Wind - New Generic:1,1,1
+VRE_Example,Wind - New Generic:2,1,1
+VRE_Example,Wind - New Generic:3,1,1
+VRE_Example,Wind - New Generic:4,1,1
+VRE_Example,Wind - New Generic:5,1,1
+VRE_Example,Solar - New Generic:0,1,1
+VRE_Example,Solar - New Generic:1,1,1
+VRE_Example,Solar - New Generic:2,1,1
+VRE_Example,Solar - New Generic:3,1,1
+VRE_Example,Solar - New Generic:4,1,1
+VRE_Example,Solar - New Generic:5,1,1
