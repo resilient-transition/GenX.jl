@@ -1,0 +1,2 @@
+resource,cluster,zone,region,existing_cap_mw,can_retire,new_build,inv_cost_per_mwyr,min_cap_mw,max_cap_mw,var_om_cost_per_mwh,fixed_om_cost_per_mwyr,lds,reg_max,rsv_max
+Hydro - Existing:0,1.0,1.0,KY,482.20000000000005,0,0,0.0,0.0,-1.0,0.0,0.0,0,1.0,1.0

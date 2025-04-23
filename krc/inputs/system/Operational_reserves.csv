@@ -1,0 +1,3 @@
+Regulating Reserve Requirement (% of Demand),Regulating Reserve Requirement (% of VREs),Contingency Reserve Requirement (MW),Contingency Reserve Requirement (% of VRE),Contingency Reserve Requirement (% of Demand),Single Largest Thermal Contingency,Unserved Contingency Reserve Penalty ($/MW-hr)
+Reg_Req_Percent_Demand,Reg_Req_Percent_VRE,Static_Contingency_MW,Rsv_Req_Percent_Demand,Rsv_Req_Percent_VRE,Dynamic_Contingency,Unmet_Rsv_Penalty_Dollar_per_MW
+0.015,0.0,431.0,0.0,0.0,0.0,1000.0

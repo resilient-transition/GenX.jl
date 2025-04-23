@@ -1,5 +1,0 @@
-Network_zones,transmission_path_name,Network_Lines,Start_Zone,End_Zone,Line_Max_Flow_MW,Line_Loss_Percentage,Line_Max_Reinforcement_MW,Line_Reinforcement_Cost_per_MWyr
-1,MISO-to-KY,1,2,1,5.8,0,0,0
-2,PJM-to-KY,2,3,1,6.4,0,0,0
-3,TVA-to-KY,3,4,1,2.2,0,0,0
-4,,,,,,,,
