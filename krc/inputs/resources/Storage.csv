@@ -1,5 +1,0 @@
-resource,cluster,zone,region,existing_cap_mw,existing_cap_mwh,can_retire,new_build,inv_cost_per_mwyr,inv_cost_per_mwhyr,min_cap_mw,max_cap_mw,min_cap_mwh,max_cap_mwh,min_duration,max_duration,model,var_om_cost_per_mwh,fixed_om_cost_per_mwyr,fixed_om_cost_per_mwhyr,lds,eff_down,eff_up,self_disch,reg_max,rsv_max
-Battery - Planned:0,1.0,1.0,KY,0.0,0.0,0,0,0.0,0.0,0.0,-1.0,0.0,-1.0,4.0,4.0,1,0.0,0.0,0.0,0,1.0,0.85,0.002,1.0,1.0
-4-hr Battery - New Generic,1.0,1.0,KY,0.0,0.0,0,1,22020.0,17984.0,0.0,,0.0,-1.0,4.0,4.0,1,0.15,6006.0,5398.0,0,1.0,0.85,0.002,1.0,1.0
-8-hr Battery - New Generic,1.0,1.0,KY,0.0,0.0,0,1,22020.0,17984.0,0.0,-1.0,0.0,-1.0,8.0,8.0,1,0.15,6006.0,5398.0,0,1.0,0.85,0.002,1.0,1.0
-100-hr Storage - New Generic,1.0,1.0,KY,0.0,0.0,0,1,264563.614,0.0,0.0,-1.0,0.0,-1.0,100.0,100.0,1,0.15,33756.9293,0.0,1,1.0,0.45,0.0,1.0,1.0
