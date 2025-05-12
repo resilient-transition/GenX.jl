@@ -7,7 +7,9 @@ requires-python = ">=3.12"
 dependencies = [
     "jupyter>=1.1.1",
     "loguru>=0.7.3",
+    "nbstripout>=0.8.1",
     "pandas>=2.2.3",
+    "pre-commit>=4.2.0",
     "universal-pathlib>=0.2.6",
     "xlwings>=0.33.14",
 ]
