@@ -57,50 +57,50 @@ function run_genx_case_simple!(case::AbstractString, mysetup::Dict, optimizer::A
         system_path = joinpath(case, mysetup["SystemFolder"])
         prevent_doubled_timedomainreduction(system_path)
         if !time_domain_reduced_files_exist(TDRpath)
-            println("Clustering Time Series Data (Grouped)...")
+            @info "Clustering Time Series Data (Grouped)..."
             cluster_inputs(case, settings_path, mysetup)
         else
-            println("Time Series Data Already Clustered.")
+            @info "Time Series Data Already Clustered."
         end
     end
 
     ### Configure solver
-    println("Configuring Solver")
+    @info "Configuring Solver"
     solver_name = lowercase(get(mysetup, "Solver", ""))
     OPTIMIZER = configure_solver(settings_path, optimizer; solver_name=solver_name)
 
     #### Running a case
 
     ### Load inputs
-    println("Loading Inputs")
+    @info "Loading Inputs"
     myinputs = load_inputs(mysetup, case)
 
-    println("Generating the Optimization Model")
+    @info "Generating the Optimization Model"
     time_elapsed = @elapsed EP = generate_model(mysetup, myinputs, OPTIMIZER)
-    println("Time elapsed for model building is")
-    println(time_elapsed)
+    @info "Time elapsed for model building is"
+    @debug time_elapsed
 
-    println("Solving Model")
+    @info "Solving Model"
     EP, solve_time = solve_model(EP, mysetup)
     myinputs["solve_time"] = solve_time # Store the model solve time in myinputs
 
     # Run MGA if the MGA flag is set to 1 else only save the least cost solution
     if has_values(EP)
-        println("Writing Output")
+        @info "Writing Output"
         outputs_path = get_default_output_folder(case)
         elapsed_time = @elapsed outputs_path = write_outputs(EP,
             outputs_path,
             mysetup,
             myinputs)
-        println("Time elapsed for writing is")
-        println(elapsed_time)
+        @debug "Time elapsed for writing is"
+        @debug elapsed_time
         if mysetup["ModelingToGenerateAlternatives"] == 1
-            println("Starting Model to Generate Alternatives (MGA) Iterations")
+            @info "Starting Model to Generate Alternatives (MGA) Iterations"
             mga(EP, case, mysetup, myinputs)
         end
 
         if mysetup["MethodofMorris"] == 1
-            println("Starting Global sensitivity analysis with Method of Morris")
+            @info "Starting Global sensitivity analysis with Method of Morris"
             morris(EP, case, mysetup, myinputs, outputs_path, OPTIMIZER)
         end
     end
@@ -124,21 +124,21 @@ function run_genx_case_multistage!(case::AbstractString, mysetup::Dict, optimize
         if !time_domain_reduced_files_exist(TDRpath)
             if (mysetup["MultiStage"] == 1) &&
                (TDRSettingsDict["MultiStageConcatenate"] == 0)
-                println("Clustering Time Series Data (Individually)...")
+                @info "Clustering Time Series Data (Individually)..."
                 for stage_id in 1:mysetup["MultiStageSettingsDict"]["NumStages"]
                     cluster_inputs(case, settings_path, mysetup, stage_id)
                 end
             else
-                println("Clustering Time Series Data (Grouped)...")
+                @info "Clustering Time Series Data (Grouped)..."
                 cluster_inputs(case, settings_path, mysetup)
             end
         else
-            println("Time Series Data Already Clustered.")
+            @warn "Time Series Data Already Clustered."
         end
     end
 
     ### Configure solver
-    println("Configuring Solver")
+    @info "Configuring Solver"
     solver_name = lowercase(get(mysetup, "Solver", ""))
     OPTIMIZER = configure_solver(settings_path, optimizer; solver_name=solver_name)
 
@@ -168,7 +168,7 @@ function run_genx_case_multistage!(case::AbstractString, mysetup::Dict, optimize
         inputs_dict, mysetup["MultiStageSettingsDict"]["NumStages"])
 
     ### Solve model
-    println("Solving Model")
+    @info "Solving Model"
 
     # Prepare folder for results    
     outpath = get_default_output_folder(case)

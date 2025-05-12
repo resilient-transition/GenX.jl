@@ -19,7 +19,7 @@ B can be sited per MW of resource A retired).
 
 """
 function retrofit(EP::Model, inputs::Dict)
-    println("Retrofit Resources Module")
+    @debug "Retrofit Resources Module"
 
     gen = inputs["RESOURCES"]
 

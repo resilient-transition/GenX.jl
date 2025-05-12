@@ -15,7 +15,7 @@ Also note that co-located VRE and storage resources, there are three different c
 	requirements.
 """
 function minimum_capacity_requirement!(EP::Model, inputs::Dict, setup::Dict)
-    println("Minimum Capacity Requirement Module")
+    @debug "Minimum Capacity Requirement Module"
     NumberOfMinCapReqs = inputs["NumberOfMinCapReqs"]
 
     # if input files are present, add minimum capacity requirement slack variables

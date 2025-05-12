@@ -330,7 +330,7 @@ function create_resource_array(resource_folder::AbstractString,
             push!(resources, resources_same_type)
             # update id offset for next type of resources
             resource_id_offset += length(resources_same_type)
-            @info filename * " Successfully Read."
+            @debug filename * " Successfully Read."
         end
     end
     isempty(resources) &&
@@ -764,7 +764,7 @@ function add_policies_to_resources!(resources::Vector{<:AbstractResource},
             # if file exists, add policy to resources
             if isfile(path)
                 add_policy_to_resources!(resources, path, filename)
-                @info filename * " Successfully Read."
+                @debug filename * " Successfully Read."
             end
         end
     end
@@ -810,7 +810,7 @@ function add_modules_to_resources!(resources::Vector{<:AbstractResource},
         filename = joinpath(resources_path, "Resource_multistage_data.csv")
         multistage_in = load_multistage_dataframe(filename, scale_factor)
         push!(modules, multistage_in)
-        @info "Multistage data successfully read."
+        @debug "Multistage data successfully read."
     end
 
     ## Loop over modules and add attributes to resources
@@ -954,7 +954,7 @@ function process_piecewisefuelusage!(setup::Dict,
         inputs["PWFU_Num_Segments"] = num_segments
         inputs["THERM_COMMIT_PWFU"] = intersect(ids_with_unit_commitment(gen), HAS_PWFU)
 
-        @info "Piecewise fuel usage data successfully read!"
+        @debug "Piecewise fuel usage data successfully read!"
     end
     return nothing
 end

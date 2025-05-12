@@ -10,5 +10,5 @@ function load_ELCC_inputs!(setup::Dict, path::AbstractString, inputs::Dict)
     inputs["ELCC_multipliers"] = load_dataframe(joinpath(path,"resources","policy_assignments","ELCC_multipliers.csv"))
     inputs["ELCC_facets"] = load_dataframe(joinpath(path,"resources","policy_assignments","ELCC_facets.csv"))
 
-    println("ELCC inputs Successfully Read!")
+    @debug "ELCC inputs Successfully Read!"
 end

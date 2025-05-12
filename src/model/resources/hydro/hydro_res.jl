@@ -61,7 +61,7 @@ In case the reservoir capacity is known ($y \in W^{cap}$), then an additional co
 ```
 """
 function hydro_res!(EP::Model, inputs::Dict, setup::Dict)
-    println("Hydro Reservoir Core Resources Module")
+    @debug "Hydro Reservoir Core Resources Module"
 
     gen = inputs["RESOURCES"]
 
@@ -212,7 +212,7 @@ r_{y,z, t} \leq \upsilon^{rsv}_{y,z}\times \Delta^{total}_{y,z}
 ```
 """
 function hydro_res_operational_reserves!(EP::Model, inputs::Dict)
-    println("Hydro Reservoir Operational Reserves Module")
+    @debug "Hydro Reservoir Operational Reserves Module"
 
     gen = inputs["RESOURCES"]
 

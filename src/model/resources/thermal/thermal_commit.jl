@@ -125,7 +125,7 @@ Like with the ramping constraints, the minimum up and down constraint time also 
 It is recommended that users of GenX must use longer subperiods than the longest min up/down time if modeling UC. Otherwise, the model will report error.
 """
 function thermal_commit!(EP::Model, inputs::Dict, setup::Dict)
-    println("Thermal (Unit Commitment) Resources Module")
+    @debug "Thermal (Unit Commitment) Resources Module"
 
     gen = inputs["RESOURCES"]
 
@@ -306,7 +306,7 @@ When modeling frequency regulation and spinning reserves contributions, thermal 
 
 """
 function thermal_commit_operational_reserves!(EP::Model, inputs::Dict)
-    println("Thermal Commit Operational Reserves Module")
+    @debug "Thermal Commit Operational Reserves Module"
 
     gen = inputs["RESOURCES"]
 

@@ -57,9 +57,9 @@ function solve_model(EP::Model, setup::Dict)
 
     if has_values(EP)
         if has_duals(EP) # fully linear model
-            println("LP solved for primal")
+            @info "LP solved for primal"
         else
-            println("MILP solved for primal")
+            @info "MILP solved for primal"
         end
 
         ## Record solver time

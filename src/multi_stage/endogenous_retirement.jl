@@ -69,7 +69,7 @@ end
 function endogenous_retirement!(EP::Model, inputs::Dict, setup::Dict)
     multi_stage_settings = setup["MultiStageSettingsDict"]
 
-    println("Endogenous Retirement Module")
+    @debug "Endogenous Retirement Module"
 
     num_stages = multi_stage_settings["NumStages"]
     cur_stage = multi_stage_settings["CurStage"]
@@ -183,7 +183,7 @@ function endogenous_retirement_discharge!(EP::Model,
         num_stages::Int,
         cur_stage::Int,
         stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (Discharge) Module")
+    @debug "Endogenous Retirement (Discharge) Module"
 
     gen = inputs["RESOURCES"]
 
@@ -271,7 +271,7 @@ function endogenous_retirement_charge!(EP::Model,
         num_stages::Int,
         cur_stage::Int,
         stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (Charge) Module")
+    @debug "Endogenous Retirement (Charge) Module"
 
     gen = inputs["RESOURCES"]
 
@@ -337,7 +337,7 @@ function endogenous_retirement_energy!(EP::Model,
         num_stages::Int,
         cur_stage::Int,
         stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (Energy) Module")
+    @debug "Endogenous Retirement (Energy) Module"
 
     gen = inputs["RESOURCES"]
 
@@ -403,7 +403,7 @@ function endogenous_retirement_vre_stor_dc!(EP::Model,
         num_stages::Int,
         cur_stage::Int,
         stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (VRE-Storage DC) Module")
+    @debug "Endogenous Retirement (VRE-Storage DC) Module"
 
     gen = inputs["RESOURCES"]
 
@@ -469,7 +469,7 @@ function endogenous_retirement_vre_stor_solar!(EP::Model,
         num_stages::Int,
         cur_stage::Int,
         stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (VRE-Storage Solar) Module")
+    @debug "Endogenous Retirement (VRE-Storage Solar) Module"
 
     gen = inputs["RESOURCES"]
 
@@ -535,7 +535,7 @@ function endogenous_retirement_vre_stor_wind!(EP::Model,
         num_stages::Int,
         cur_stage::Int,
         stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (VRE-Storage Wind) Module")
+    @debug "Endogenous Retirement (VRE-Storage Wind) Module"
 
     gen = inputs["RESOURCES"]
 
@@ -601,7 +601,7 @@ function endogenous_retirement_vre_stor_elec!(EP::Model,
         num_stages::Int,
         cur_stage::Int,
         stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (VRE-Storage Electrolyzer) Module")
+    @debug "Endogenous Retirement (VRE-Storage Electrolyzer) Module"
 
     gen = inputs["RESOURCES"]
 
@@ -656,7 +656,7 @@ end
 
 function endogenous_retirement_vre_stor_stor!(
         EP::Model, inputs::Dict, num_stages::Int, cur_stage::Int, stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (VRE-Storage Storage) Module")
+    @debug "Endogenous Retirement (VRE-Storage Storage) Module"
 
     gen = inputs["RESOURCES"]
 
@@ -722,7 +722,7 @@ function endogenous_retirement_vre_stor_discharge_dc!(EP::Model,
         num_stages::Int,
         cur_stage::Int,
         stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (VRE-Storage Discharge DC) Module")
+    @debug "Endogenous Retirement (VRE-Storage Discharge DC) Module"
 
     gen = inputs["RESOURCES"]
 
@@ -791,7 +791,7 @@ function endogenous_retirement_vre_stor_charge_dc!(EP::Model,
         num_stages::Int,
         cur_stage::Int,
         stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (VRE-Storage Charge DC) Module")
+    @debug "Endogenous Retirement (VRE-Storage Charge DC) Module"
 
     gen = inputs["RESOURCES"]
     NEW_CAP_CHARGE_DC = inputs["NEW_CAP_CHARGE_DC"] # Set of all resources eligible for new capacity
@@ -856,7 +856,7 @@ function endogenous_retirement_vre_stor_discharge_ac!(EP::Model,
         num_stages::Int,
         cur_stage::Int,
         stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (VRE-Storage Discharge AC) Module")
+    @debug "Endogenous Retirement (VRE-Storage Discharge AC) Module"
 
     gen = inputs["RESOURCES"]
     NEW_CAP_DISCHARGE_AC = inputs["NEW_CAP_DISCHARGE_AC"] # Set of all resources eligible for new capacity
@@ -924,7 +924,7 @@ function endogenous_retirement_vre_stor_charge_ac!(EP::Model,
         num_stages::Int,
         cur_stage::Int,
         stage_lens::Array{Int, 1})
-    println("Endogenous Retirement (VRE-Storage Charge AC) Module")
+    @debug "Endogenous Retirement (VRE-Storage Charge AC) Module"
 
     gen = inputs["RESOURCES"]
     NEW_CAP_CHARGE_AC = inputs["NEW_CAP_CHARGE_AC"] # Set of all resources eligible for new capacity

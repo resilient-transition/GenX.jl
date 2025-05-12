@@ -37,5 +37,5 @@ function load_co2_cap!(setup::Dict, path::AbstractString, inputs::Dict)
         inputs["dfMaxCO2Rate"] = mat
     end
 
-    println(filename * " Successfully Read!")
+    @debug filename * " Successfully Read!"
 end

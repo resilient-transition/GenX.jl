@@ -84,7 +84,7 @@ As with losses option 2, this segment-wise approximation of a quadratic loss fun
 ```
 """
 function transmission!(EP::Model, inputs::Dict, setup::Dict)
-    println("Transmission Module")
+    @debug "Transmission Module"
     T = inputs["T"]     # Number of time steps (hours)
     Z = inputs["Z"]     # Number of zones
     L = inputs["L"]     # Number of transmission lines

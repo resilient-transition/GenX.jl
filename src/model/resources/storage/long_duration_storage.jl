@@ -95,7 +95,7 @@ Similarly, the minimum storage content is imposed to be positive in every period
 Additional details on this approach are available in [Parolin et al., 2024](https://doi.org/10.48550/arXiv.2409.19079).
 """
 function long_duration_storage!(EP::Model, inputs::Dict, setup::Dict)
-    println("Long Duration Storage Module")
+    @debug "Long Duration Storage Module"
 
     gen = inputs["RESOURCES"]
 

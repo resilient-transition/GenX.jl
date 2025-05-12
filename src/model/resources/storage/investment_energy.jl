@@ -42,7 +42,7 @@ In addition, this function adds investment and fixed O\&M related costs related 
 ```
 """
 function investment_energy!(EP::Model, inputs::Dict, setup::Dict)
-    println("Storage Investment Module")
+    @debug "Storage Investment Module"
 
     gen = inputs["RESOURCES"]
 

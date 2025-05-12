@@ -15,5 +15,5 @@ function load_hydrogen_demand!(setup::Dict, path::AbstractString, inputs::Dict)
     if "PriceCap" in names(df)
         inputs["H2DemandPriceCap"] = df[!, :PriceCap] / scale_factor
     end
-    println(filename * " Successfully Read!")
+    @debug filename * " Successfully Read!"
 end

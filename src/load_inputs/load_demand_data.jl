@@ -87,14 +87,14 @@ function load_demand_data!(setup::Dict, path::AbstractString, inputs::Dict)
     # Maximum hourly demand curtailable as % of the max demand (for each segment)
     inputs["pMax_D_Curtail"] = as_vector(:Max_Demand_Curtailment)
 
-    println("Demand (load) data Successfully Read!")
+    @debug "Demand (load) data Successfully Read!"
 end
 
 # ensure that the length of demand data exactly matches
 # the number of subperiods times their length
 # and that the number of subperiods equals the list of provided weights
 function validatetimebasis(inputs::Dict)
-    println("Validating time basis")
+    @info "Validating time basis"
     demand_length = size(inputs["pD"], 1)
     generators_variability_length = size(inputs["pP_Max"], 2)
 

@@ -267,7 +267,7 @@ function generate_model(setup::Dict, inputs::Dict, OPTIMIZER::MOI.OptimizerWithA
     if setup["PrintModel"] == 1
         filepath = joinpath(pwd(), "YourModel.lp")
         JuMP.write_to_file(EP, filepath)
-        println("Model Printed")
+        @debug "Model Printed"
     end
 
     return EP

@@ -55,7 +55,7 @@ settings dictionary.
 - `settings::Dict`: The settings dictionary.
 """
 function configure_settings(settings_path::String, output_settings_path::String)
-    println("\nConfiguring Settings")
+    @info "\nConfiguring Settings"
     model_settings = YAML.load(open(settings_path))
 
     settings = default_settings()
@@ -195,7 +195,7 @@ settings dictionary.
 - `settings::Dict`: The multistage settings dictionary.
 """
 function configure_settings_multistage(settings_path::String)
-    println("Configuring Multistage Settings")
+    @info "Configuring Multistage Settings"
     model_settings = isfile(settings_path) ? YAML.load(open(settings_path)) : Dict{Any, Any}()
 
     settings = default_settings_multistage()

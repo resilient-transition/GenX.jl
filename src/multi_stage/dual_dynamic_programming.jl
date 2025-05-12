@@ -193,7 +193,7 @@ function run_ddp(outpath::AbstractString, models_d::Dict, setup::Dict, inputs_d:
 
         if (ic > 10000)
             println("***********")
-            println("Exiting Without Covergence!")
+            @warn "Exiting Without Covergence!"
             println(string("Upper Bound = ", z_upper))
             println(string("Lower Bound = ", z_lower))
             println("***********")

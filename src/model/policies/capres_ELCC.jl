@@ -20,7 +20,7 @@ Model capacity reserve margin with ELCC-type constraints
 """
 function capres_ELCC!(EP::Model, inputs::Dict, setup::Dict)
     # capacity reserve margin constraint
-    println("ELCC Module")
+    @debug "ELCC Module"
     G = inputs["G"]
     resource_names = inputs["RESOURCE_NAMES"]
 
@@ -33,13 +33,13 @@ function capres_ELCC!(EP::Model, inputs::Dict, setup::Dict)
             throw("more than one matching RID found for resource $resource")
         end
         if length(matching_rids) == 0
-            println("did  not find matching resource for resource $resource")
+            @warn "did not find matching resource for resource $resource"
         else
             rid=matching_rids[1]
             if rid in axes(EP[:eTotalCap])[1]
                 EP[:eNQC] += EP[:eTotalCap][rid] * df_NQC[df_NQC[!,"Resource"].==resource,"NQC_derate"][1]
             else
-                println("did not find eTotalCap for resource $resource")
+                @warn "did not find eTotalCap for resource $resource"
             end
         end
     end

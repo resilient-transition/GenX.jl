@@ -36,7 +36,7 @@ In the second constraint in both the above formulations, $\delta$ denote the inc
 function mga(EP::Model, path::AbstractString, setup::Dict, inputs::Dict)
     if setup["ModelingToGenerateAlternatives"] == 1
         # Start MGA Algorithm
-        println("MGA Module")
+        @debug "MGA Module"
 
         # Objective function value of the least cost problem
         Least_System_Cost = objective_value(EP)
@@ -142,7 +142,7 @@ where $\Theta_{y,t,z,r}$ is a generation of technology $y$ in zone $z$ in time p
 - This function updates the model object `EP` with the MGA variables and constraints in-place.
 """
 function mga!(EP::Model, inputs::Dict, setup::Dict)
-    println("MGA Module")
+    @debug "MGA Module"
 
     T = inputs["T"]     # Number of time steps (hours)
     Z = inputs["Z"]     # Number of zones

@@ -18,7 +18,7 @@ function load_generators_variability!(setup::Dict, path::AbstractString, inputs:
     existing_variability = names(gen_var)
     for r in all_resources
         if r ∉ existing_variability
-            @info "assuming availability of 1.0 for resource $r."
+            @debug "assuming availability of 1.0 for resource $r."
             ensure_column!(gen_var, r, 1.0)
         end
     end
@@ -30,5 +30,5 @@ function load_generators_variability!(setup::Dict, path::AbstractString, inputs:
     inputs["pP_Max"] = transpose(Matrix{Float64}(gen_var[1:inputs["T"],
         2:(inputs["G"] + 1)]))
 
-    println(filename * " Successfully Read!")
+    @debug filename * " Successfully Read!"
 end

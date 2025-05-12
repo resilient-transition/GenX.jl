@@ -8,7 +8,7 @@ function storage_symmetric!(EP::Model, inputs::Dict, setup::Dict)
     # (e.g. most electrochemical batteries that use same components for charge & discharge)
     # STOR = 1 corresponds to storage with distinct power and energy capacity decisions but symmetric charge/discharge power ratings
 
-    println("Storage Resources with Symmetric Charge/Discharge Capacity Module")
+    @debug "Storage Resources with Symmetric Charge/Discharge Capacity Module"
 
     OperationalReserves = setup["OperationalReserves"]
     CapacityReserveMargin = setup["CapacityReserveMargin"]
