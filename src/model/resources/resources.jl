@@ -659,6 +659,12 @@ function efficiency_down(r::T) where {T <: Union{Hydro, Storage}}
     get(r, :eff_down, default_percent)
 end
 
+# Pmin and Pmax
+pmin_hourly(r::AbstractResource) = get(r, :pmin_hourly, default_zero)
+pmax_hourly(r::AbstractResource) = get(r, :pmax_hourly, default_percent)
+pmin_annual(r::AbstractResource) = get(r, :pmin_annual, default_zero)
+pmax_annual(r::AbstractResource) = get(r, :pmax_annual, default_percent)
+
 # Ramp up and down
 const VarPower = Union{Electrolyzer, Hydro, Thermal}
 min_power(r::VarPower) = get(r, :min_power, default_zero)

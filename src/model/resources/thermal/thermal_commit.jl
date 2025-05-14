@@ -241,6 +241,39 @@ function thermal_commit!(EP::Model, inputs::Dict, setup::Dict)
             t]>=sum(EP[:vSHUT][y, u] for u in hoursbefore(p, t, 0:(Down_Time[y] - 1))))
     ## END Constraints for thermal units subject to integer (discrete) unit commitment decisions
 
+    ## Hourly & annual Pmin/Pmax constraints (these don't obey commitment)
+    @constraints(
+        EP,
+        begin
+            # Hourly Pmin
+            [y in THERM_COMMIT, t = 1:T],
+            EP[:vP][y, t] >= pmin_hourly(gen[y]) * cap_size(gen[y])
+
+            # Hourly Pmax
+            [y in THERM_COMMIT, t = 1:T],
+            EP[:vP][y, t] <= pmax_hourly(gen[y]) * cap_size(gen[y])
+        end
+    )
+
+    # TODO: These subsets don't work for some reason that I don't understand... 
+    # >>> ERROR: LoadError: type Thermal has no attribute pmin_annual
+    # PMIN_ANNUAL_RESOURCES = [y for y in THERM_COMMIT if gen[y].pmin_annual != 0]
+    # PMAX_ANNUAL_RESOURCES = [y for y in THERM_COMMIT if gen[y].pmax_annual != 1]
+
+    @constraints(
+        EP,
+        begin
+            # Annual Pmin
+            [y in THERM_COMMIT],
+            sum(inputs["omega"][t] * EP[:vP][y, t] for t in 1:T) / sum(cap_size(gen[y]) * inputs["omega"][t] for t in 1:T) >= pmin_annual(gen[y])
+
+            # Annual Pmax
+            [y in THERM_COMMIT],
+            sum(inputs["omega"][t] * EP[:vP][y, t] for t in 1:T) / sum(cap_size(gen[y]) * inputs["omega"][t] for t in 1:T) <= pmax_annual(gen[y])
+        end
+    )
+
+
     # Additional constraints on fusion; create total recirculating power expressions
     FUSION = ids_with(gen, fusion)
     if !isempty(FUSION)
