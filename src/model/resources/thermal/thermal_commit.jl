@@ -242,34 +242,30 @@ function thermal_commit!(EP::Model, inputs::Dict, setup::Dict)
     ## END Constraints for thermal units subject to integer (discrete) unit commitment decisions
 
     ## Hourly & annual Pmin/Pmax constraints (these don't obey commitment)
+    PMIN_HOURLY_RESOURCES = [y for y in THERM_COMMIT if pmin_hourly(gen[y]) > 0]
     @constraints(
         EP,
         begin
             # Hourly Pmin
-            [y in THERM_COMMIT, t = 1:T],
-            EP[:vP][y, t] >= pmin_hourly(gen[y]) * cap_size(gen[y])
-
-            # Hourly Pmax
-            [y in THERM_COMMIT, t = 1:T],
-            EP[:vP][y, t] <= pmax_hourly(gen[y]) * cap_size(gen[y])
+            cPminHourly[y in PMIN_HOURLY_RESOURCES, t = 1:T],
+            EP[:vP][y, t] >= pmin_hourly(gen[y]) * EP[:eTotalCap][y]
         end
     )
 
-    # TODO: These subsets don't work for some reason that I don't understand... 
-    # >>> ERROR: LoadError: type Thermal has no attribute pmin_annual
-    # PMIN_ANNUAL_RESOURCES = [y for y in THERM_COMMIT if gen[y].pmin_annual != 0]
-    # PMAX_ANNUAL_RESOURCES = [y for y in THERM_COMMIT if gen[y].pmax_annual != 1]
+    # TODO: Probably should rename this `CF_MIN/MAX`
+    PMIN_ANNUAL_RESOURCES = [y for y in THERM_COMMIT if pmin_annual(gen[y]) > 0]
+    PMAX_ANNUAL_RESOURCES = [y for y in THERM_COMMIT if pmax_annual(gen[y]) < 1]
 
     @constraints(
         EP,
         begin
             # Annual Pmin
-            [y in THERM_COMMIT],
-            sum(inputs["omega"][t] * EP[:vP][y, t] for t in 1:T) / sum(cap_size(gen[y]) * inputs["omega"][t] for t in 1:T) >= pmin_annual(gen[y])
+            cPminAnnual[y in PMIN_ANNUAL_RESOURCES],
+            sum(inputs["omega"][t] * EP[:vP][y, t] for t in 1:T) >= pmin_annual(gen[y]) * sum(EP[:eTotalCap][y] * inputs["omega"][t] for t in 1:T)
 
             # Annual Pmax
-            [y in THERM_COMMIT],
-            sum(inputs["omega"][t] * EP[:vP][y, t] for t in 1:T) / sum(cap_size(gen[y]) * inputs["omega"][t] for t in 1:T) <= pmax_annual(gen[y])
+            cPmaxAnnual[y in PMAX_ANNUAL_RESOURCES],
+            sum(inputs["omega"][t] * EP[:vP][y, t] for t in 1:T) <= pmax_annual(gen[y]) * sum(EP[:eTotalCap][y] * inputs["omega"][t] for t in 1:T)
         end
     )
 
