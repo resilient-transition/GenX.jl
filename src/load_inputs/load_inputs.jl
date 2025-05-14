@@ -45,6 +45,10 @@ function load_inputs(setup::Dict, path::AbstractString)
         end
     end
 
+    if haskey(setup,"CapResELCC") && (setup["CapResELCC"] == 1)
+        load_ELCC_inputs!(setup,path,inputs)
+    end
+
     # Read in general configuration parameters for operational reserves (resource-specific reserve parameters are read in load_resources_data)
     if setup["OperationalReserves"] == 1
         load_operational_reserves!(setup, system_path, inputs)

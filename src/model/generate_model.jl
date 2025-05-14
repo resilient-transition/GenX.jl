@@ -173,7 +173,7 @@ function generate_model!(EP::AbstractModel,setup::Dict, inputs::Dict)
 
     # Model constraints, variables, expression related to reservoir hydropower resources with long duration storage
     if inputs["REP_PERIOD"] > 1 && !isempty(inputs["STOR_HYDRO_LONG_DURATION"])
-        hydro_inter_period_linkage!(EP, inputs)
+        hydro_inter_period_linkage!(EP, inputs, setup)
     end
 
     # Model constraints, variables, expression related to demand flexibility resources
@@ -230,6 +230,11 @@ function generate_model!(EP::AbstractModel,setup::Dict, inputs::Dict)
     #Capacity Reserve Margin
     if setup["CapacityReserveMargin"] > 0
         cap_reserve_margin!(EP, inputs, setup)
+    end
+
+    #ELCC version of capacity reserve margin
+    if haskey(setup,"CapResELCC") && (setup["CapResELCC"] == 1)
+        capres_ELCC!(EP, inputs, setup)
     end
 
     if (setup["MinCapReq"] == 1)

@@ -105,6 +105,10 @@ function investment_discharge!(EP::AbstractModel, inputs::Dict, setup::Dict)
             eExistingCap[y]
         end)
 
+    # add vReliability Cap for purposes of de-rating resources' capacity to PRM via custom constraints, if needed by user
+    @variable(EP, vReliabilityCap[y in 1:G]>=0)
+    @constraint(EP, cReliabilityCap[y in 1:G], vReliabilityCap[y]<=eTotalCap[y])
+
     ### Need editting ##
     @expression(EP, eCFix[y in 1:G],
         if y in NEW_CAP # Resources eligible for new capacity (Non-Retrofit)
