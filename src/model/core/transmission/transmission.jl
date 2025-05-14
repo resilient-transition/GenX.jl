@@ -203,11 +203,11 @@ function transmission!(EP::Model, inputs::Dict, setup::Dict)
                 inputs["pPercent_Loss"][l] * (vTAUX_POS[l, t] + vTAUX_NEG[l, t])
 
                 # Power flow is sum of positive and negative components
-                cTAuxSum[l in LOSS_LINES, t = 1:T],
+                cTAuxSum[l in L, t = 1:T],
                 vTAUX_POS[l, t] - vTAUX_NEG[l, t] == vFLOW[l, t]
 
                 # Sum of auxiliary flow variables in either direction cannot exceed maximum line flow capacity
-                cTAuxLimit[l in LOSS_LINES, t = 1:T],
+                cTAuxLimit[l in L, t = 1:T],
                 vTAUX_POS[l, t] + vTAUX_NEG[l, t] <= EP[:eAvail_Trans_Cap][l]
             end)
 
