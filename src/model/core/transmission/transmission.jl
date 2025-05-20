@@ -1,5 +1,5 @@
 @doc raw"""
-	transmission!(EP::Model, inputs::Dict, setup::Dict)
+	transmission!(EP::AbstractModel, inputs::Dict, setup::Dict)
 This function establishes decisions, expressions, and constraints related to transmission power flows between model zones and associated transmission losses (if modeled).
 
 Power flow and transmission loss terms are also added to the power balance constraint for each zone:
@@ -83,7 +83,7 @@ As with losses option 2, this segment-wise approximation of a quadratic loss fun
 \end{aligned}
 ```
 """
-function transmission!(EP::Model, inputs::Dict, setup::Dict)
+function transmission!(EP::AbstractModel, inputs::Dict, setup::Dict)
     @debug "Transmission Module"
     T = inputs["T"]     # Number of time steps (hours)
     Z = inputs["Z"]     # Number of zones
@@ -167,6 +167,21 @@ function transmission!(EP::Model, inputs::Dict, setup::Dict)
         end
     end
 
+    ### Objective Function Expressions ###
+    @expression(
+        EP,
+        eCHurdle[l = 1:L, t = 1:T],
+        (
+            inputs["omega"][t]*(inputs["Hurdle_Rate_Forward"][l] * vTAUX_POS[l, t])
+            + inputs["omega"][t]*(inputs["Hurdle_Rate_Reverse"][l] * vTAUX_NEG[l, t])
+        )
+    )
+    # Sum hurdle costs
+    @expression(EP, eTotalCHurdleT[t = 1:T], sum(eCHurdle[l, t] for l in 1:L))
+    @expression(EP, eTotalCHurdle, sum(eTotalCHurdleT[t] for t in 1:T))
+    # Add total hurdle cost to objective function
+    add_to_expression!(EP[:eObj], eTotalCHurdle)
+
     ### Constraints ###
 
     ## Power flow and transmission (between zone) loss related constraints
@@ -188,11 +203,11 @@ function transmission!(EP::Model, inputs::Dict, setup::Dict)
                 inputs["pPercent_Loss"][l] * (vTAUX_POS[l, t] + vTAUX_NEG[l, t])
 
                 # Power flow is sum of positive and negative components
-                cTAuxSum[l in LOSS_LINES, t = 1:T],
+                cTAuxSum[l in L, t = 1:T],
                 vTAUX_POS[l, t] - vTAUX_NEG[l, t] == vFLOW[l, t]
 
                 # Sum of auxiliary flow variables in either direction cannot exceed maximum line flow capacity
-                cTAuxLimit[l in LOSS_LINES, t = 1:T],
+                cTAuxLimit[l in L, t = 1:T],
                 vTAUX_POS[l, t] + vTAUX_NEG[l, t] <= EP[:eAvail_Trans_Cap][l]
             end)
 
