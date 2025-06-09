@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /genx
 
 # Copy Julia project files
-COPY Project.toml Manifest.toml ./
+COPY Project.toml ./
 
 # Install Julia dependencies
 RUN julia -e "using Pkg; Pkg.instantiate(); Pkg.precompile()"
