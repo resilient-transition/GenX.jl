@@ -1,0 +1,44 @@
+name: Deploy GenX to Azure Container Apps
+
+on:
+  push:
+    branches: [ 5.001/dev ]
+  workflow_dispatch:
+
+env:
+  REGISTRY_LOGIN_SERVER: myuniqueregistry123.azurecr.io
+  REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+  RESOURCE_GROUP: genxrunner
+  CONTAINER_APP: genx-job
+  CONTAINER_ENV: genx-env
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log in to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Build and push image to ACR
+      run: |
+        az acr build \
+          --registry ${{ env.REGISTRY_LOGIN_SERVER}} \
+          --image genx:${{ github.sha }} \
+          --file Dockerfile .
+
+    - name: Deploy to Container Apps
+      run: |
+        az containerapp update \
+          --name ${{ env.CONTAINER_APP }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --image ${{ env.REGISTRY_LOGIN_SERVER }}/genx:${{ github.sha }} \
+          --cpu 4.0 \
+          --memory 8.0Gi \
+          --min-replicas 0 \
+          --max-replicas 5
