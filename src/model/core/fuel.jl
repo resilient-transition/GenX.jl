@@ -84,7 +84,7 @@ vMulFuels_{y, i, t} <= vPower_{y,t} \times MaxCofire_{i}
 ```
 """
 function fuel!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Fuel Module")
+    @debug "Fuel Module"
     gen = inputs["RESOURCES"]
 
     T = inputs["T"]     # Number of time steps (hours)

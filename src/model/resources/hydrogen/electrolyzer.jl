@@ -59,7 +59,7 @@ Electrolyzers are bound by the following limits on maximum and minimum power out
 
 """
 function electrolyzer!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Electrolyzer Resources Module")
+    @debug "Electrolyzer Resources Module"
 
     omega = inputs["omega"]
     gen = inputs["RESOURCES"]

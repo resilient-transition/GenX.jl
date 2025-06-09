@@ -24,7 +24,7 @@ In practice, most existing renewable portfolio standard policies do not account 
 However, with 100% RPS or CES policies enacted in several jurisdictions, policy makers may wish to include storage losses in the minimum energy share, as otherwise there will be a difference between total generation and total demand that will permit continued use of non-qualifying resources (e.g. emitting generators).
 """
 function energy_share_requirement!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Energy Share Requirement Policies Module")
+    @debug "Energy Share Requirement Policies Module"
 
     # if input files are present, add energy share requirement slack variables
     if haskey(inputs, "dfESR_slack")

@@ -60,7 +60,7 @@ function cap_reserve_margin!(EP::AbstractModel, inputs::Dict, setup::Dict)
     # capacity reserve margin constraint
     T = inputs["T"]
     NCRM = inputs["NCapacityReserveMargin"]
-    println("Capacity Reserve Margin Policies Module")
+    @debug "Capacity Reserve Margin Policies Module"
 
     # if input files are present, add capacity reserve margin slack variables
     if haskey(inputs, "dfCapRes_slack")

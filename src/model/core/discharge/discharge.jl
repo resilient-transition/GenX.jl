@@ -11,7 +11,7 @@ This module additionally defines contributions to the objective function from va
 ```
 """
 function discharge!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Discharge Module")
+    @debug "Discharge Module"
 
     gen = inputs["RESOURCES"]
 

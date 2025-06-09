@@ -82,7 +82,7 @@ Additional details on this approach are available in [Parolin et al., 2024](http
 """
 
 function hydro_inter_period_linkage!(EP::AbstractModel, inputs::Dict)
-    println("Long Duration Storage Module for Hydro Reservoir")
+    @debug "Long Duration Storage Module for Hydro Reservoir"
 
     gen = inputs["RESOURCES"]
 

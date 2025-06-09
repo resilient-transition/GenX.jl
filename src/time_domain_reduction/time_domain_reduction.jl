@@ -293,7 +293,7 @@ function cluster(ClusterMethod,
         W = R.counts # get the cluster sizes - W for Weights
         M = R.medoids # get the cluster centers - M for Medoids
     else
-        println("INVALID ClusterMethod. Select kmeans or kmedoids. Running kmeans instead.")
+        @error "INVALID ClusterMethod. Select kmeans or kmedoids. Running kmeans instead."
         return cluster("kmeans", ClusteringInputDF, NClusters, nIters, v, random)
     end
     return [R, A, W, M, DistMatrix]
@@ -409,7 +409,7 @@ function get_integral_extreme(GDF, statKey, col_names, ConstCols)
         (stat, stat_idx) = findmin(sum([GDF[!, Symbol(c)]
                                         for c in setdiff(col_names, ConstCols)]))
     else
-        println("Error: Statistic Key ", statKey, " is invalid. Choose `Max' or `Min'.")
+        @error "Error: Statistic Key ", statKey, " is invalid. Choose `Max' or `Min'."
     end
     return (stat, stat_idx)
 end
@@ -431,7 +431,7 @@ function get_absolute_extreme(DF, statKey, col_names, ConstCols)
                                         for c in setdiff(col_names, ConstCols)]))
         group_idx = DF.Group[stat_idx]
     else
-        println("Error: Statistic Key ", statKey, " is invalid. Choose `Max' or `Min'.")
+        @error "Error: Statistic Key ", statKey, " is invalid. Choose `Max' or `Min'."
     end
     return (stat, group_idx)
 end
@@ -644,7 +644,7 @@ function cluster_inputs(inpath,
         v = false;
         random = true)
     if v
-        println(now())
+        @debug now()
     end
 
     ##### Step 0: Load in settings and data
@@ -804,7 +804,7 @@ function cluster_inputs(inpath,
                             fit(ZScoreTransform, InputData[:, c]; dims = 1),
                             InputData[:, c]) for c in 1:length(OldColNames)]
     else
-        println("ERROR InvalidScalingMethod: Use N for Normalization or S for Standardization.")
+        @error "ERROR InvalidScalingMethod: Use N for Normalization or S for Standardization."
         println("CONTINUING using 0->1 normalization...")
         normProfiles = [StatsBase.transform(
                             fit(UnitRangeTransform,
@@ -1022,9 +1022,9 @@ function cluster_inputs(inpath,
             end
         end
         if v && (length(ExtremeWksList) + NClusters == MaxPeriods)
-            println("Stopped iterating by hitting the maximum number of periods.")
+            @warn "Stopped iterating by hitting the maximum number of periods."
         elseif v
-            println("Stopped by meeting the accuracy threshold.")
+            @info "Stopped by meeting the accuracy threshold."
         end
     end
 
@@ -1274,7 +1274,7 @@ function cluster_inputs(inpath,
                 demand_in = demand_in[1:size(DMOutputData, 1), :]
 
                 if v
-                    println("Writing demand file...")
+                    @debug "Writing demand file..."
                 end
                 CSV.write(joinpath(inpath, "inputs", Stage_Outfiles[per]["Demand"]),
                     demand_in)
@@ -1288,7 +1288,7 @@ function cluster_inputs(inpath,
                 insertcols!(GVOutputData, 1, :Time_Index => 1:size(GVOutputData, 1))
                 NewGVColNames = [GVColMap[string(c)] for c in names(GVOutputData)]
                 if v
-                    println("Writing resource file...")
+                    @debug "Writing resource file..."
                 end
                 CSV.write(joinpath(inpath, "inputs", Stage_Outfiles[per]["GVar"]),
                     GVOutputData,
@@ -1346,21 +1346,21 @@ function cluster_inputs(inpath,
                 rename!(NewFuelOutput, FuelCols)
                 insertcols!(NewFuelOutput, 1, :Time_Index => 0:(size(NewFuelOutput, 1) - 1))
                 if v
-                    println("Writing fuel profiles...")
+                    @debug "Writing fuel profiles..."
                 end
                 CSV.write(joinpath(inpath, "inputs", Stage_Outfiles[per]["Fuel"]),
                     NewFuelOutput)
 
                 ### TDR_Results/Period_map.csv
                 if v
-                    println("Writing period map...")
+                    @debug "Writing period map..."
                 end
                 CSV.write(joinpath(inpath, "inputs", Stage_Outfiles[per]["PMap"]),
                     Stage_PeriodMaps[per])
 
                 ### TDR_Results/time_domain_reduction_settings.yml
                 if v
-                    println("Writing .yml settings...")
+                    @debug "Writing .yml settings..."
                 end
                 YAML.write_file(joinpath(inpath, "inputs", Stage_Outfiles[per]["YAML"]),
                     myTDRsetup)
@@ -1404,7 +1404,7 @@ function cluster_inputs(inpath,
             demand_in = demand_in[1:size(DMOutputData, 1), :]
 
             if v
-                println("Writing demand file...")
+                @debug "Writing demand file..."
             end
             CSV.write(joinpath(inpath, "inputs", input_stage_directory, Demand_Outfile),
                 demand_in)
@@ -1419,7 +1419,7 @@ function cluster_inputs(inpath,
             insertcols!(GVOutputData, 1, :Time_Index => 1:size(GVOutputData, 1))
             NewGVColNames = [GVColMap[string(c)] for c in names(GVOutputData)]
             if v
-                println("Writing resource file...")
+                @debug "Writing resource file..."
             end
             CSV.write(joinpath(inpath, "inputs", input_stage_directory, GVar_Outfile),
                 GVOutputData,
@@ -1492,21 +1492,21 @@ function cluster_inputs(inpath,
             rename!(NewFuelOutput, FuelCols)
             insertcols!(NewFuelOutput, 1, :Time_Index => 0:(size(NewFuelOutput, 1) - 1))
             if v
-                println("Writing fuel profiles...")
+                @debug "Writing fuel profiles..."
             end
             CSV.write(joinpath(inpath, "inputs", input_stage_directory, Fuel_Outfile),
                 NewFuelOutput)
 
             ### Period_map.csv
             if v
-                println("Writing period map...")
+                @debug "Writing period map..."
             end
             CSV.write(joinpath(inpath, "inputs", input_stage_directory, PMap_Outfile),
                 PeriodMap)
 
             ### time_domain_reduction_settings.yml
             if v
-                println("Writing .yml settings...")
+                @debug "Writing .yml settings..."
             end
             YAML.write_file(
                 joinpath(inpath, "inputs", input_stage_directory, YAML_Outfile),
@@ -1540,7 +1540,7 @@ function cluster_inputs(inpath,
         demand_in = demand_in[1:size(DMOutputData, 1), :]
 
         if v
-            println("Writing demand file...")
+            @debug "Writing demand file..."
         end
         CSV.write(joinpath(inpath, Demand_Outfile), demand_in)
 
@@ -1554,7 +1554,7 @@ function cluster_inputs(inpath,
         insertcols!(GVOutputData, 1, :Time_Index => 1:size(GVOutputData, 1))
         NewGVColNames = [GVColMap[string(c)] for c in names(GVOutputData)]
         if v
-            println("Writing resource file...")
+            @debug "Writing resource file..."
         end
         CSV.write(joinpath(inpath, GVar_Outfile), GVOutputData, header = NewGVColNames)
 
@@ -1608,19 +1608,19 @@ function cluster_inputs(inpath,
         rename!(NewFuelOutput, FuelCols)
         insertcols!(NewFuelOutput, 1, :Time_Index => 0:(size(NewFuelOutput, 1) - 1))
         if v
-            println("Writing fuel profiles...")
+            @debug "Writing fuel profiles..."
         end
         CSV.write(joinpath(inpath, Fuel_Outfile), NewFuelOutput)
 
         ### TDR_Results/Period_map.csv
         if v
-            println("Writing period map...")
+            @debug "Writing period map..."
         end
         CSV.write(joinpath(inpath, PMap_Outfile), PeriodMap)
 
         ### TDR_Results/time_domain_reduction_settings.yml
         if v
-            println("Writing .yml settings...")
+            @debug "Writing .yml settings..."
         end
         YAML.write_file(joinpath(inpath, YAML_Outfile), myTDRsetup)
     end

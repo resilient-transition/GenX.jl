@@ -67,7 +67,7 @@ Option 3 (dynamic commitment-based contingency) is expressed by the following se
 where $M_y$ is a `big M' constant equal to the largest possible capacity that can be installed for generation cluster $y$, and $Contingency\_Aux_{y,z,t} \in [0,1]$ is a binary auxiliary variable that is forced by the second and third equations above to be 1 if the commitment state for that generation cluster $\nu_{y,z,t} > 0$ for any generator $y \in \mathcal{UC}$ and zone $z$ and time period $t$, and can be 0 otherwise. Note that this dynamic commitment-based contingency can only be specified if discrete unit commitment decisions are used (e.g. it will not work if relaxed unit commitment is used).
 """
 function operational_reserves_contingency!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Operational Reserves Contingency Module")
+    @debug "Operational Reserves Contingency Module"
 
     gen = inputs["RESOURCES"]
 
@@ -97,15 +97,15 @@ function operational_reserves_contingency!(EP::AbstractModel, inputs::Dict, setu
     ### Expressions ###
     if UCommit == 1 && pDynamic_Contingency == 1
         # Largest contingency defined as largest installed generator
-        println("Dynamic Contingency Type 1: Modeling the largest contingency as the largest installed generator")
+        @debug "Dynamic Contingency Type 1: Modeling the largest contingency as the largest installed generator"
         @expression(EP, eContingencyReq[t = 1:T], vLARGEST_CONTINGENCY)
     elseif UCommit == 1 && pDynamic_Contingency == 2
         # Largest contingency defined for each hour as largest committed generator
-        println("Dynamic Contingency Type 2: Modeling the largest contingency as the largest largest committed generator")
+        @debug "Dynamic Contingency Type 2: Modeling the largest contingency as the largest largest committed generator"
         @expression(EP, eContingencyReq[t = 1:T], vLARGEST_CONTINGENCY[t])
     else
         # Largest contingency defined fixed as user-specifed static contingency in MW
-        println("Static Contingency: Modeling the largest contingency as user-specifed static contingency")
+        @debug "Static Contingency: Modeling the largest contingency as user-specifed static contingency"
         @expression(EP, eContingencyReq[t = 1:T], inputs["pStatic_Contingency"])
     end
 
@@ -211,7 +211,7 @@ function operational_reserves_core!(EP::AbstractModel, inputs::Dict, setup::Dict
     # DEV NOTE: After simplifying reserve changes are integrated/confirmed, should we revise such that reserves can be modeled without UC constraints on?
     # Is there a use case for economic dispatch constraints with reserves?
 
-    println("Operational Reserves Core Module")
+    @debug "Operational Reserves Core Module"
 
     gen = inputs["RESOURCES"]
     UCommit = setup["UCommit"]

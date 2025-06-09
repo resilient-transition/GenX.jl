@@ -17,7 +17,7 @@ This constraint can be enabled by setting `HourlyMatching==1` in `genx_settings.
 
 """
 function hourly_matching!(EP::AbstractModel, inputs::Dict)
-    println("Hourly Matching Policies Module")
+    @debug "Hourly Matching Policies Module"
     T = inputs["T"]
     Z = inputs["Z"]
 

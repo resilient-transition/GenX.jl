@@ -51,7 +51,7 @@ eEmissionsCaptureByPlant_{g,t} = CO2\_Capture\_Fraction_y * vFuel_{y,t}  * CO2_{
 
 """
 function co2!(EP::AbstractModel, inputs::Dict)
-    println("CO2 Module")
+    @debug "CO2 Module"
 
     gen = inputs["RESOURCES"]
     G = inputs["G"]     # Number of resources (generators, storage, DR, and DERs)

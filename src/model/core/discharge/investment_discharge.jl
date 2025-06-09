@@ -33,7 +33,7 @@ In addition, this function adds investment and fixed O&M related costs related t
 ```
 """
 function investment_discharge!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Investment Discharge Module")
+    @debug "Investment Discharge Module"
     MultiStage = setup["MultiStage"]
 
     gen = inputs["RESOURCES"]

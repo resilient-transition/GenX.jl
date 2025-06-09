@@ -42,7 +42,7 @@ When not modeling regulation and reserves, thermal units not subject to unit com
 (See Constraints 3-4 in the code)
 """
 function thermal_no_commit!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Thermal (No Unit Commitment) Resources Module")
+    @debug "Thermal (No Unit Commitment) Resources Module"
 
     gen = inputs["RESOURCES"]
 
@@ -141,7 +141,7 @@ When modeling regulation and spinning reserves, thermal units not subject to uni
 Note there are multiple versions of these constraints in the code in order to avoid creation of unecessary constraints and decision variables for thermal units unable to provide regulation and/or reserves contributions due to input parameters (e.g. ```Reg_Max=0``` and/or ```RSV_Max=0```).
 """
 function thermal_no_commit_operational_reserves!(EP::AbstractModel, inputs::Dict)
-    println("Thermal No Commit Reserves Module")
+    @debug "Thermal No Commit Reserves Module"
 
     gen = inputs["RESOURCES"]
 

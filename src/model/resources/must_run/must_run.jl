@@ -13,7 +13,7 @@ For must-run resources ($y\in \mathcal{MR}$) output in each time period $t$ must
 ```
 """
 function must_run!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Must-Run Resources Module")
+    @debug "Must-Run Resources Module"
 
     gen = inputs["RESOURCES"]
 

@@ -44,7 +44,7 @@ If $t$ is first time step of the year (or the first time step of the representat
 function flexible_demand!(EP::AbstractModel, inputs::Dict, setup::Dict)
     ## Flexible demand resources available during all hours and can be either delayed or advanced (virtual storage-shiftable demand) - DR ==1
 
-    println("Flexible Demand Resources Module")
+    @debug "Flexible Demand Resources Module"
 
     T = inputs["T"]     # Number of time steps (hours)
     Z = inputs["Z"]     # Number of zones

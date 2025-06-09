@@ -39,7 +39,7 @@ In addition, this function adds investment and fixed O&M related costs related t
 ```
 """
 function investment_charge!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Charge Investment Module")
+    @debug "Charge Investment Module"
 
     gen = inputs["RESOURCES"]
 

@@ -12,7 +12,7 @@ returns: Dict (dictionary) object containing all data inputs
 function load_inputs(setup::Dict, path::AbstractString)
 
     ## Read input files
-    println("Reading Input CSV Files")
+    @info "Reading Input CSV Files"
     ## input paths
     system_path = joinpath(path, setup["SystemFolder"])
     resources_path = joinpath(path, setup["ResourcesFolder"])
@@ -89,7 +89,7 @@ function load_inputs(setup::Dict, path::AbstractString)
     inputs["VirtualChargeDischargeCost"] = setup["VirtualChargeDischargeCost"] /
                                            scale_factor
 
-    println("CSV Files Successfully Read In From $path")
+    @debug "CSV Files Successfully Read In From $path"
 
     return inputs
 end

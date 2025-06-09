@@ -129,7 +129,7 @@ Finally, the constraints on maximum discharge rate are replaced by the following
 The above reserve related constraints are established by ```storage_all_operational_reserves!()``` in ```storage_all.jl```
 """
 function storage!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Storage Resources Module")
+    @debug "Storage Resources Module"
     gen = inputs["RESOURCES"]
     T = inputs["T"]
     STOR_ALL = inputs["STOR_ALL"]

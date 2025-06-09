@@ -125,7 +125,7 @@ Like with the ramping constraints, the minimum up and down constraint time also 
 It is recommended that users of GenX must use longer subperiods than the longest min up/down time if modeling UC. Otherwise, the model will report error.
 """
 function thermal_commit!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Thermal (Unit Commitment) Resources Module")
+    @debug "Thermal (Unit Commitment) Resources Module"
 
     gen = inputs["RESOURCES"]
 
@@ -241,6 +241,35 @@ function thermal_commit!(EP::AbstractModel, inputs::Dict, setup::Dict)
             t]>=sum(EP[:vSHUT][y, u] for u in hoursbefore(p, t, 0:(Down_Time[y] - 1))))
     ## END Constraints for thermal units subject to integer (discrete) unit commitment decisions
 
+    ## Hourly & annual Pmin/Pmax constraints (these don't obey commitment)
+    PMIN_HOURLY_RESOURCES = [y for y in THERM_COMMIT if pmin_hourly(gen[y]) > 0]
+    @constraints(
+        EP,
+        begin
+            # Hourly Pmin
+            cPminHourly[y in PMIN_HOURLY_RESOURCES, t = 1:T],
+            EP[:vP][y, t] >= pmin_hourly(gen[y]) * EP[:eTotalCap][y]
+        end
+    )
+
+    # TODO: Probably should rename this `CF_MIN/MAX`
+    PMIN_ANNUAL_RESOURCES = [y for y in THERM_COMMIT if pmin_annual(gen[y]) > 0]
+    PMAX_ANNUAL_RESOURCES = [y for y in THERM_COMMIT if pmax_annual(gen[y]) < 1]
+
+    @constraints(
+        EP,
+        begin
+            # Annual Pmin
+            cPminAnnual[y in PMIN_ANNUAL_RESOURCES],
+            sum(inputs["omega"][t] * EP[:vP][y, t] for t in 1:T) >= pmin_annual(gen[y]) * sum(EP[:eTotalCap][y] * inputs["omega"][t] for t in 1:T)
+
+            # Annual Pmax
+            cPmaxAnnual[y in PMAX_ANNUAL_RESOURCES],
+            sum(inputs["omega"][t] * EP[:vP][y, t] for t in 1:T) <= pmax_annual(gen[y]) * sum(EP[:eTotalCap][y] * inputs["omega"][t] for t in 1:T)
+        end
+    )
+
+
     # Additional constraints on fusion; create total recirculating power expressions
     FUSION = ids_with(gen, fusion)
     if !isempty(FUSION)
@@ -306,7 +335,7 @@ When modeling frequency regulation and spinning reserves contributions, thermal 
 
 """
 function thermal_commit_operational_reserves!(EP::AbstractModel, inputs::Dict)
-    println("Thermal Commit Operational Reserves Module")
+    @debug "Thermal Commit Operational Reserves Module"
 
     gen = inputs["RESOURCES"]
 

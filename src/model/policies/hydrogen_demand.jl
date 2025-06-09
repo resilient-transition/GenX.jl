@@ -21,7 +21,7 @@ where $\eta^{electrolyzer}_y$ is the efficiency of the electrolyzer $y$ in megaw
 
 """
 function hydrogen_demand!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Hydrogen Demand Module")
+    @debug "Hydrogen Demand Module"
     kt_to_t = 10^3
     NumberOfH2DemandReqs = inputs["NumberOfH2DemandReqs"]
 

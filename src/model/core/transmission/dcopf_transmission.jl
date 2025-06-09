@@ -23,7 +23,7 @@ Finally, we enforce the reference voltage phase angle constraint (for the slack 
 
 """
 function dcopf_transmission!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("DC-OPF Module")
+    @debug "DC-OPF Module"
 
     T = inputs["T"]     # Number of time steps (hours)
     Z = inputs["Z"]     # Number of zones

@@ -26,7 +26,7 @@ The additional transmission capacity, $\bigtriangleup\varphi^{cap}_{l} $, is con
 ```
 """
 function investment_transmission!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Investment Transmission Module")
+    @debug "Investment Transmission Module"
 
     L = inputs["L"]     # Number of transmission lines
     NetworkExpansion = setup["NetworkExpansion"]

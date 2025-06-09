@@ -23,7 +23,7 @@ The total cost of start-ups across all generators subject to unit commitment ($y
 The sum of start-up costs is added to the objective function.
 """
 function ucommit!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("Unit Commitment Module")
+    @debug "Unit Commitment Module"
 
     T = inputs["T"]     # Number of time steps (hours)
     COMMIT = inputs["COMMIT"] # For not, thermal resources are the only ones eligible for Unit Committment

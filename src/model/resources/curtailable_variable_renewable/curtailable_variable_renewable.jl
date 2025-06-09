@@ -17,7 +17,7 @@ function curtailable_variable_renewable!(EP::AbstractModel, inputs::Dict, setup:
     ## Controllable variable renewable generators
     ### Option of modeling VRE generators with multiple availability profiles and capacity limits -  Num_VRE_Bins in Vre.csv  >1
     ## Default value of Num_VRE_Bins ==1
-    println("Dispatchable Resources Module")
+    @debug "Dispatchable Resources Module"
 
     gen = inputs["RESOURCES"]
 
@@ -51,27 +51,27 @@ function curtailable_variable_renewable!(EP::AbstractModel, inputs::Dict, setup:
     end
 
     ### Constraints ###
-    if OperationalReserves == 1
-        # Constraints on power output and contribution to regulation and reserves
-        curtailable_variable_renewable_operational_reserves!(EP, inputs)
-        remove_operational_reserves_for_binned_vre_resources!(EP, inputs)
-    else
-        # For resource for which we are modeling hourly power output
-        for y in VRE_POWER_OUT
-            # Define the set of generator indices corresponding to the different sites (or bins) of a particular VRE technology (E.g. wind or solar) in a particular zone.
-            # For example the wind resource in a particular region could be include three types of bins corresponding to different sites with unique interconnection, hourly capacity factor and maximim available capacity limits.
-            VRE_BINS = intersect(resource_id.(gen[resource_id.(gen) .>= y]),
-                resource_id.(gen[resource_id.(gen) .<= y + num_vre_bins(gen[y]) - 1]))
+    # if OperationalReserves == 1     # TODO 2025-06-04: This doesn't work right now
+    #     # Constraints on power output and contribution to regulation and reserves
+    #     curtailable_variable_renewable_operational_reserves!(EP, inputs)
+    #     remove_operational_reserves_for_binned_vre_resources!(EP, inputs)
+    # else
+    # For resource for which we are modeling hourly power output
+    for y in VRE_POWER_OUT
+        # Define the set of generator indices corresponding to the different sites (or bins) of a particular VRE technology (E.g. wind or solar) in a particular zone.
+        # For example the wind resource in a particular region could be include three types of bins corresponding to different sites with unique interconnection, hourly capacity factor and maximim available capacity limits.
+        VRE_BINS = intersect(resource_id.(gen[resource_id.(gen) .>= y]),
+            resource_id.(gen[resource_id.(gen) .<= y + num_vre_bins(gen[y]) - 1]))
 
-            # Maximum power generated per hour by renewable generators must be less than
-            # sum of product of hourly capacity factor for each bin times its the bin installed capacity
-            # Note: inequality constraint allows curtailment of output below maximum level.
-            @constraint(EP,
-                [t = 1:T],
-                EP[:vP][y,t]<=sum(inputs["pP_Max"][yy, t] * EP[:eTotalCap][yy]
-                for yy in VRE_BINS))
-        end
+        # Maximum power generated per hour by renewable generators must be less than
+        # sum of product of hourly capacity factor for each bin times its the bin installed capacity
+        # Note: inequality constraint allows curtailment of output below maximum level.
+        @constraint(EP,
+            [t = 1:T],
+            EP[:vP][y,t]<=sum(inputs["pP_Max"][yy, t] * EP[:eTotalCap][yy]
+            for yy in VRE_BINS))
     end
+    # end
 
     # Set power variables for all bins that are not being modeled for hourly output to be zero
     for y in VRE_NO_POWER_OUT

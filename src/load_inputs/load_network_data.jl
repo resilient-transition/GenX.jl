@@ -41,7 +41,7 @@ function load_network_data!(setup::Dict, path::AbstractString, inputs_nw::Dict)
             @warn("Because the DC_OPF flag is active, GenX will not allow any transmission capacity expansion. Set the DC_OPF flag to 0 if you want to optimize tranmission capacity expansion.")
             setup["NetworkExpansion"] = 0
         end
-        println("Reading DC-OPF values...")
+        @debug "Reading DC-OPF values..."
         # Transmission line voltage (in kV)
         line_voltage_kV = to_floats(:Line_Voltage_kV)
         # Transmission line reactance (in Ohms)
@@ -110,7 +110,7 @@ function load_network_data!(setup::Dict, path::AbstractString, inputs_nw::Dict)
         inputs_nw["Hurdle_Rate_Reverse"]=0.0 .* as_vector(:Network_Lines)
     end
 
-    println(filename * " Successfully Read!")
+    @debug(filename * " Successfully Read!")
 
     return network_var
 end

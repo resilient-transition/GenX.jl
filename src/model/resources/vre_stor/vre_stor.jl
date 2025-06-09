@@ -79,7 +79,7 @@ The second constraint with both capacity reserve margins and operating reserves 
 The rest of the constraints are dependent upon specific configurable components within the module and are listed below.
 """
 function vre_stor!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("VRE-Storage Module")
+    @debug "VRE-Storage Module"
 
     ### LOAD DATA ###
 
@@ -422,7 +422,7 @@ In addition, this function adds investment and fixed O&M related costs related t
 ```
 """
 function inverter_vre_stor!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("VRE-STOR Inverter Module")
+    @debug "VRE-STOR Inverter Module"
 
     ### LOAD DATA ###
 
@@ -581,7 +581,7 @@ In addition, this function adds investment, fixed O&M, and variable O&M costs re
 ```
 """
 function solar_vre_stor!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("VRE-STOR Solar Module")
+    @debug "VRE-STOR Solar Module"
 
     ### LOAD DATA ###
     gen = inputs["RESOURCES"]
@@ -758,7 +758,7 @@ In addition, this function adds investment, fixed O&M, and variable O&M costs re
 ```
 """
 function wind_vre_stor!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("VRE-STOR Wind Module")
+    @debug "VRE-STOR Wind Module"
 
     ### LOAD DATA ###
     gen = inputs["RESOURCES"]
@@ -1005,7 +1005,7 @@ In addition, this function adds investment, fixed O&M, and variable O&M costs re
 ```
 """
 function stor_vre_stor!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("VRE-STOR Storage Module")
+    @debug "VRE-STOR Storage Module"
 
     ### LOAD DATA ###
 
@@ -1365,7 +1365,7 @@ In constraint 3, electrolyzers are bound by the following limits on maximum and 
 The regional demand requirement is included in electrolyzer.jl
 """
 function elec_vre_stor!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("VRE-STOR Electrolyzer Module")
+    @debug "VRE-STOR Electrolyzer Module"
 
     ### LOAD DATA ###
     gen = inputs["RESOURCES"]
@@ -1518,7 +1518,7 @@ The rest of the long duration energy storage constraints are copied and applied 
     long duration energy storage resources are further elaborated upon in ```vre_stor_capres!()```.
 """
 function lds_vre_stor!(EP::AbstractModel, inputs::Dict)
-    println("VRE-STOR LDS Module")
+    @debug "VRE-STOR LDS Module"
 
     ### LOAD DATA ###
 
@@ -1737,7 +1737,7 @@ In addition, this function adds investment and fixed O&M costs related to charge
 ```
 """
 function investment_charge_vre_stor!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("VRE-STOR Charge Investment Module")
+    @debug "VRE-STOR Charge Investment Module"
 
     ### LOAD INPUTS ###
     gen = inputs["RESOURCES"]
@@ -2233,7 +2233,7 @@ All other constraints are identical to those used to track the actual state of c
     state of charge, build up storage inventory and state of charge at the beginning of each period. 
 """
 function vre_stor_capres!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("VRE-STOR Capacity Reserve Margin Module")
+    @debug "VRE-STOR Capacity Reserve Margin Module"
 
     ### LOAD DATA ###
 
@@ -2666,7 +2666,7 @@ Lastly, if the co-located resource has a variable renewable energy component, th
 ```
 """
 function vre_stor_operational_reserves!(EP::AbstractModel, inputs::Dict, setup::Dict)
-    println("VRE-STOR Operational Reserves Module")
+    @debug "VRE-STOR Operational Reserves Module"
 
     ### LOAD DATA & CREATE SETS ###
 
