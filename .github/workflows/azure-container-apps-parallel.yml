@@ -4,281 +4,246 @@ on:
   workflow_dispatch:
     inputs:
       blob_container:
-        description: 'Azure Blob Storage container name'
+        description: 'Azure Blob Storage container name (e.g., genx-data)'
         required: true
-        default: 'genx-data'
+        type: string
       case_names:
-        description: 'Comma-separated list of case names (e.g., "case1,case2,case3")'
+        description: 'Comma-separated list of case names to run (e.g., kentucky,texas,california)'
         required: true
-        default: 'test_case'
+        type: string
       cpu_cores:
-        description: 'CPU cores per job (0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0)'
+        description: 'CPU cores per job (0.25-2.0)'
         required: false
         default: '1.0'
+        type: string
       memory_gb:
-        description: 'Memory in GB per job (0.5, 1.0, 1.5, 2.0, 3.0, 3.5, 4.0)'
+        description: 'Memory in GB per job (0.5-4.0)'
         required: false
         default: '2.0'
+        type: string
       max_parallel:
-        description: 'Maximum parallel jobs (1-20)'
+        description: 'Maximum parallel jobs'
         required: false
         default: '5'
+        type: string
 
 env:
-  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-  AZURE_LOCATION: ${{ secrets.AZURE_LOCATION || 'westus' }}
-  CONTAINER_ENVIRONMENT: genx-env
+  AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
   AZURE_STORAGE_ACCOUNT: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
   AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
+  CONTAINER_REGISTRY: genxregistry${{ github.run_number }}
+  CONTAINER_APP_ENV: genx-env-${{ github.run_number }}
 
 jobs:
-  prepare-matrix:
+  setup:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      case-matrix: ${{ steps.parse-cases.outputs.cases }}
+      registry-name: ${{ steps.setup-vars.outputs.registry }}
+      image-name: ${{ steps.setup-vars.outputs.image }}
     steps:
-    - name: Create job matrix
-      id: set-matrix
-      run: |
-        # Convert comma-separated case names to JSON array
-        CASE_NAMES="${{ github.event.inputs.case_names }}"
-        BLOB_CONTAINER="${{ github.event.inputs.blob_container }}"
-        
-        echo "Input case names: $CASE_NAMES"
-        echo "Blob container: $BLOB_CONTAINER"
-        
-        # Create matrix JSON using a simpler approach
-        MATRIX_JSON=$(cat << EOF
-        {
-          "include": [
-        EOF
-        )
-        
-        # Add each case to the matrix
-        IFS=',' read -ra CASES <<< "$CASE_NAMES"
-        for i in "${!CASES[@]}"; do
-          CASE_NAME=$(echo "${CASES[$i]}" | xargs)  # trim whitespace
-          if [ $i -gt 0 ]; then
-            MATRIX_JSON="$MATRIX_JSON,"
-          fi
-          MATRIX_JSON="$MATRIX_JSON
-            {
-              \"case_name\": \"$CASE_NAME\",
-              \"input_folder\": \"inputs/$CASE_NAME\",
-              \"blob_container\": \"$BLOB_CONTAINER\"
-            }"
-        done
-        
-        MATRIX_JSON="$MATRIX_JSON
-          ]
-        }"
-        
-        echo "Generated matrix JSON:"
-        echo "$MATRIX_JSON"
-        
-        # Validate JSON format
-        echo "$MATRIX_JSON" | jq . > /dev/null
-        if [ $? -eq 0 ]; then
-          echo "JSON is valid"
-          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
-        else
-          echo "JSON is invalid, exiting"
-          exit 1
-        fi
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  run-parallel-genx:
-    needs: prepare-matrix
+      - name: Parse case names into matrix
+        id: parse-cases
+        run: |
+          cases="${{ github.event.inputs.case_names }}"
+          # Convert comma-separated string to JSON array
+          json_array=$(echo "$cases" | jq -R 'split(",") | map(select(length > 0))')
+          echo "cases=$json_array" >> $GITHUB_OUTPUT
+          echo "Parsed cases: $json_array"
+
+      - name: Setup variables
+        id: setup-vars
+        run: |
+          echo "registry=${{ env.CONTAINER_REGISTRY }}" >> $GITHUB_OUTPUT
+          echo "image=${{ env.CONTAINER_REGISTRY }}.azurecr.io/genx:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create Azure Container Registry
+        run: |
+          az acr create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_REGISTRY }} \
+            --sku Basic \
+            --admin-enabled true \
+            --location ${{ env.AZURE_LOCATION }}
+
+      - name: Build and push Docker image
+        run: |
+          # Login to ACR
+          az acr login --name ${{ env.CONTAINER_REGISTRY }}
+          
+          # Build and push image
+          docker build -t ${{ steps.setup-vars.outputs.image }} .
+          docker push ${{ steps.setup-vars.outputs.image }}
+
+      - name: Create Container App Environment
+        run: |
+          az containerapp env create \
+            --name ${{ env.CONTAINER_APP_ENV }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --location ${{ env.AZURE_LOCATION }}
+
+  run-parallel-jobs:
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: ${{ fromJson(github.event.inputs.max_parallel || '5') }}
-      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
-      fail-fast: false  # Continue other jobs even if one fails
-    
+      max-parallel: ${{ fromJson(github.event.inputs.max_parallel) }}
+      matrix:
+        case: ${{ fromJson(needs.setup.outputs.case-matrix) }}
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    - name: Setup Container Environment
-      run: |
-        echo "Setting up environment for case: ${{ matrix.case_name }}"
-        
-        # Check if container environment exists
-        ENV_EXISTS=$(az containerapp env list --resource-group $AZURE_RESOURCE_GROUP --query "[?name=='$CONTAINER_ENVIRONMENT'].name" -o tsv)
-        
-        if [ -z "$ENV_EXISTS" ]; then
-          echo "Creating Container App Environment..."
-          az containerapp env create \
-            --name $CONTAINER_ENVIRONMENT \
-            --resource-group $AZURE_RESOURCE_GROUP \
-            --location $AZURE_LOCATION
-        fi
-
-    - name: Build and Push GenX Image
-      run: |
-        # Build the container image reference
-        IMAGE_NAME="genx-runner:${{ github.sha }}"
-        REGISTRY_NAME="genxregistry$(echo $AZURE_RESOURCE_GROUP | tr '[:upper:]' '[:lower:]')"
-        FULL_IMAGE="${REGISTRY_NAME}.azurecr.io/${IMAGE_NAME}"
-        
-        # Check if ACR exists, create if not
-        ACR_EXISTS=$(az acr list --resource-group $AZURE_RESOURCE_GROUP --query "[?name=='$REGISTRY_NAME'].name" -o tsv)
-        
-        if [ -z "$ACR_EXISTS" ]; then
-          echo "Creating Azure Container Registry..."
-          az acr create \
-            --name $REGISTRY_NAME \
-            --resource-group $AZURE_RESOURCE_GROUP \
-            --sku Basic \
-            --admin-enabled true
-        fi
-        
-        # Check if image already exists
-        IMAGE_EXISTS=$(az acr repository show \
-          --name $REGISTRY_NAME \
-          --image $IMAGE_NAME \
-          --query "name" -o tsv 2>/dev/null || echo "")
-        
-        if [ -z "$IMAGE_EXISTS" ]; then
-          echo "Building GenX container image..."
-          az acr build \
-            --registry $REGISTRY_NAME \
-            --image $IMAGE_NAME \
-            --file Dockerfile.containerapp \
-            .
-        else
-          echo "Image already exists: $FULL_IMAGE"
-        fi
-        
-        echo "REGISTRY_NAME=$REGISTRY_NAME" >> $GITHUB_ENV
-        echo "FULL_IMAGE=$FULL_IMAGE" >> $GITHUB_ENV
-
-    - name: Run GenX Job for ${{ matrix.case_name }}
-      run: |
-        echo "Starting GenX job for case: ${{ matrix.case_name }}"
-        
-        # Create unique job name with timestamp
-        TIMESTAMP=$(date +%s)
-        JOB_NAME="genx-${{ matrix.case_name }}-${TIMESTAMP}"
-        
-        # Create and start the containerapp job
-        az containerapp job create \
-          --name $JOB_NAME \
-          --resource-group $AZURE_RESOURCE_GROUP \
-          --environment $CONTAINER_ENVIRONMENT \
-          --image $FULL_IMAGE \
-          --cpu ${{ github.event.inputs.cpu_cores || '1.0' }} \
-          --memory "${{ github.event.inputs.memory_gb || '2.0' }}Gi" \
-          --parallelism 1 \
-          --completion-count 1 \
-          --restart-policy Never \
-          --env-vars \
-            AZURE_STORAGE_ACCOUNT=$AZURE_STORAGE_ACCOUNT \
-            AZURE_STORAGE_KEY=$AZURE_STORAGE_KEY \
-            BLOB_CONTAINER=${{ matrix.blob_container }} \
-            INPUT_FOLDER=${{ matrix.input_folder }} \
-            CASE_NAME=${{ matrix.case_name }} \
-            GITHUB_SHA=${{ github.sha }}
-        
-        # Start the job execution
-        echo "Starting job execution for ${{ matrix.case_name }}..."
-        EXECUTION_NAME=$(az containerapp job start \
-          --name $JOB_NAME \
-          --resource-group $AZURE_RESOURCE_GROUP \
-          --query "name" -o tsv)
-        
-        echo "Job execution started: $EXECUTION_NAME"
-        echo "JOB_NAME=$JOB_NAME" >> $GITHUB_ENV
-        echo "EXECUTION_NAME=$EXECUTION_NAME" >> $GITHUB_ENV
-
-    - name: Monitor Job Progress for ${{ matrix.case_name }}
-      run: |
-        echo "Monitoring job progress for ${{ matrix.case_name }}..."
-        
-        # Monitor job execution for up to 2 hours
-        TIMEOUT=7200  # 2 hours
-        ELAPSED=0
-        INTERVAL=60   # Check every minute
-        
-        while [ $ELAPSED -lt $TIMEOUT ]; do
-          STATUS=$(az containerapp job execution show \
-            --name $EXECUTION_NAME \
-            --job-name $JOB_NAME \
-            --resource-group $AZURE_RESOURCE_GROUP \
-            --query "properties.status" -o tsv)
+      - name: Create and run Container App Job
+        id: run-job
+        run: |
+          JOB_NAME="genx-${{ matrix.case }}-${{ github.run_number }}"
           
-          echo "[${{ matrix.case_name }}] Job status: $STATUS (elapsed: ${ELAPSED}s)"
+          # Get ACR credentials
+          ACR_SERVER="${{ needs.setup.outputs.registry-name }}.azurecr.io"
+          ACR_USERNAME=$(az acr credential show --name ${{ needs.setup.outputs.registry-name }} --query username -o tsv)
+          ACR_PASSWORD=$(az acr credential show --name ${{ needs.setup.outputs.registry-name }} --query passwords[0].value -o tsv)
           
-          case $STATUS in
-            "Succeeded")
-              echo "✅ [${{ matrix.case_name }}] Job completed successfully!"
-              break
-              ;;
-            "Failed")
-              echo "❌ [${{ matrix.case_name }}] Job failed!"
-              # Get logs for debugging
-              az containerapp job execution logs show \
-                --name $EXECUTION_NAME \
-                --job-name $JOB_NAME \
-                --resource-group $AZURE_RESOURCE_GROUP \
-                > "${{ matrix.case_name }}_error_logs.txt"
+          # Create Container App Job
+          az containerapp job create \
+            --name "$JOB_NAME" \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --environment ${{ env.CONTAINER_APP_ENV }} \
+            --image "${{ needs.setup.outputs.image-name }}" \
+            --registry-server "$ACR_SERVER" \
+            --registry-username "$ACR_USERNAME" \
+            --registry-password "$ACR_PASSWORD" \
+            --cpu ${{ github.event.inputs.cpu_cores }} \
+            --memory ${{ github.event.inputs.memory_gb }}Gi \
+            --env-vars \
+              AZURE_STORAGE_ACCOUNT=${{ env.AZURE_STORAGE_ACCOUNT }} \
+              AZURE_STORAGE_KEY=${{ env.AZURE_STORAGE_KEY }} \
+              BLOB_CONTAINER=${{ github.event.inputs.blob_container }} \
+              CASE_NAME=${{ matrix.case }} \
+            --parallelism 1 \
+            --replica-completion-count 1 \
+            --replica-retry-limit 2 \
+            --replica-timeout 7200
+
+          # Start the job
+          EXECUTION_NAME=$(az containerapp job start --name "$JOB_NAME" --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query name -o tsv)
+          echo "execution-name=$EXECUTION_NAME" >> $GITHUB_OUTPUT
+          echo "job-name=$JOB_NAME" >> $GITHUB_OUTPUT
+
+      - name: Monitor job execution
+        run: |
+          JOB_NAME="${{ steps.run-job.outputs.job-name }}"
+          EXECUTION_NAME="${{ steps.run-job.outputs.execution-name }}"
+          
+          echo "Monitoring job: $JOB_NAME, execution: $EXECUTION_NAME"
+          
+          # Wait for job completion (timeout after 2 hours)
+          timeout=7200
+          interval=30
+          elapsed=0
+          
+          while [ $elapsed -lt $timeout ]; do
+            status=$(az containerapp job execution show \
+              --name "$JOB_NAME" \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --execution-name "$EXECUTION_NAME" \
+              --query "properties.status" -o tsv 2>/dev/null || echo "Unknown")
+            
+            echo "[$elapsed s] Job status: $status"
+            
+            if [ "$status" = "Succeeded" ]; then
+              echo "✅ Job completed successfully!"
+              exit 0
+            elif [ "$status" = "Failed" ]; then
+              echo "❌ Job failed!"
               exit 1
-              ;;
-            "Running")
-              echo "🔄 [${{ matrix.case_name }}] Job is still running..."
-              ;;
-            *)
-              echo "⏳ [${{ matrix.case_name }}] Job status: $STATUS"
-              ;;
-          esac
+            fi
+            
+            sleep $interval
+            elapsed=$((elapsed + interval))
+          done
           
-          sleep $INTERVAL
-          ELAPSED=$((ELAPSED + INTERVAL))
-        done
-        
-        if [ $ELAPSED -ge $TIMEOUT ]; then
-          echo "⚠️ [${{ matrix.case_name }}] Job timeout reached (${TIMEOUT}s)"
+          echo "⏰ Job timed out after $timeout seconds"
           exit 1
-        fi
 
-    - name: Get Results for ${{ matrix.case_name }}
-      run: |
-        echo "Retrieving results for ${{ matrix.case_name }}..."
-        
-        # Get execution logs
-        az containerapp job execution logs show \
-          --name $EXECUTION_NAME \
-          --job-name $JOB_NAME \
-          --resource-group $AZURE_RESOURCE_GROUP \
-          > "${{ matrix.case_name }}_logs.txt"
-        
-        echo "Logs saved for case: ${{ matrix.case_name }}"
+      - name: Get job logs
+        if: always()
+        run: |
+          JOB_NAME="${{ steps.run-job.outputs.job-name }}"
+          EXECUTION_NAME="${{ steps.run-job.outputs.execution-name }}"
+          
+          echo "Fetching logs for job: $JOB_NAME, execution: $EXECUTION_NAME"
+          
+          # Get logs and save to file
+          az containerapp job execution show \
+            --name "$JOB_NAME" \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --execution-name "$EXECUTION_NAME" \
+            --query "properties.template.containers[0].image" -o tsv || true
+          
+          # Try to get logs
+          az containerapp logs show \
+            --name "$JOB_NAME" \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --follow false \
+            --tail 1000 > "${{ matrix.case }}-logs.txt" || echo "Could not retrieve logs"
 
-    - name: Upload Logs as Artifacts
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: genx-logs-${{ matrix.case_name }}
-        path: "${{ matrix.case_name }}_*.txt"
+      - name: Upload job logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: genx-logs-${{ matrix.case }}
+          path: ${{ matrix.case }}-logs.txt
+          retention-days: 7
 
-  summary:
-    needs: [prepare-matrix, run-parallel-genx]
+  cleanup:
+    needs: [setup, run-parallel-jobs]
     runs-on: ubuntu-latest
     if: always()
     steps:
-    - name: Create Summary
-      run: |
-        echo "## Parallel GenX Jobs Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Total Cases:** ${{ strategy.job-total }}" >> $GITHUB_STEP_SUMMARY
-        echo "**Successful:** $(echo '${{ toJson(needs.run-parallel-genx.result) }}' | jq -r 'map(select(. == "success")) | length')" >> $GITHUB_STEP_SUMMARY
-        echo "**Failed:** $(echo '${{ toJson(needs.run-parallel-genx.result) }}' | jq -r 'map(select(. == "failure")) | length')" >> $GITHUB_STEP_SUMMARY
-        echo "**CPU per job:** ${{ github.event.inputs.cpu_cores || '1.0' }} cores" >> $GITHUB_STEP_SUMMARY
-        echo "**Memory per job:** ${{ github.event.inputs.memory_gb || '2.0' }} GB" >> $GITHUB_STEP_SUMMARY
-        echo "**Max parallel:** ${{ github.event.inputs.max_parallel || '5' }}" >> $GITHUB_STEP_SUMMARY
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Cleanup Azure resources
+        run: |
+          # Delete Container App Environment (this will also delete jobs)
+          az containerapp env delete \
+            --name ${{ env.CONTAINER_APP_ENV }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --yes || true
+
+          # Delete Container Registry
+          az acr delete \
+            --name ${{ env.CONTAINER_REGISTRY }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --yes || true
+
+  summary:
+    needs: [setup, run-parallel-jobs]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Job Summary
+        run: |
+          echo "## GenX Parallel Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Cases processed:** ${{ github.event.inputs.case_names }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Container:** ${{ github.event.inputs.blob_container }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Resources per job:** ${{ github.event.inputs.cpu_cores }} CPU, ${{ github.event.inputs.memory_gb }}GB RAM" >> $GITHUB_STEP_SUMMARY
+          echo "**Max parallel:** ${{ github.event.inputs.max_parallel }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Results location:** Azure Blob Storage container \`${{ github.event.inputs.blob_container }}\` under \`results/\` folder" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the logs artifacts for detailed execution information."

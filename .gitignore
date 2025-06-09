@@ -19,6 +19,12 @@ gurobi.log
 cplex.log
 Highs.log
 
+# Azure secrets and credentials
+github_secrets.txt
+azure_credentials.json
+*.key
+.azure/
+
 test/Logs
 
 /docs/build/
