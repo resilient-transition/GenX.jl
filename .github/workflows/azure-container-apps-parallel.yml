@@ -52,7 +52,7 @@ env:
   AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
   AZURE_STORAGE_ACCOUNT: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
   AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
-  CONTAINER_REGISTRY: genxregistry${{ github.run_number }}
+  CONTAINER_REGISTRY: genx-registry
   CONTAINER_APP_ENV: genx-env
 
 jobs:
@@ -86,14 +86,20 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Create Azure Container Registry
+      - name: Create or use existing Azure Container Registry
         run: |
-          az acr create \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --name ${{ env.CONTAINER_REGISTRY }} \
-            --sku Basic \
-            --admin-enabled true \
-            --location ${{ env.AZURE_LOCATION }}
+          # Check if registry already exists
+          if az acr show --name ${{ env.CONTAINER_REGISTRY }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} &>/dev/null; then
+            echo "Container Registry ${{ env.CONTAINER_REGISTRY }} already exists, reusing it"
+          else
+            echo "Creating Container Registry ${{ env.CONTAINER_REGISTRY }}"
+            az acr create \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --name ${{ env.CONTAINER_REGISTRY }} \
+              --sku Basic \
+              --admin-enabled true \
+              --location ${{ env.AZURE_LOCATION }}
+          fi
 
       - name: Build and push Docker image
         run: |
@@ -286,14 +292,27 @@ jobs:
           done
           
           # Container Registry cleanup based on level
-          if [ "${{ github.event.inputs.cleanup_level }}" = "registries" ] || [ "${{ github.event.inputs.cleanup_level }}" = "full" ]; then
-            echo "Deleting Container Registry '${{ env.CONTAINER_REGISTRY }}'..."
+          if [ "${{ github.event.inputs.cleanup_level }}" = "full" ]; then
+            echo "FULL CLEANUP: Deleting Container Registry '${{ env.CONTAINER_REGISTRY }}'..."
             az acr delete \
               --name ${{ env.CONTAINER_REGISTRY }} \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
               --yes || true
+          elif [ "${{ github.event.inputs.cleanup_level }}" = "registries" ]; then
+            echo "REGISTRY CLEANUP: Cleaning old images from '${{ env.CONTAINER_REGISTRY }}'..."
+            # Keep only the 5 most recent images to save storage costs
+            az acr repository list --name ${{ env.CONTAINER_REGISTRY }} --output tsv | while read repo; do
+              echo "Cleaning old tags from repository: $repo"
+              az acr repository show-tags --name ${{ env.CONTAINER_REGISTRY }} --repository "$repo" \
+                --orderby time_desc --output tsv | tail -n +6 | while read tag; do
+                if [ -n "$tag" ]; then
+                  echo "Deleting old tag: $repo:$tag"
+                  az acr repository delete --name ${{ env.CONTAINER_REGISTRY }} --image "$repo:$tag" --yes || true
+                fi
+              done
+            done
           else
-            echo "Keeping Container Registry '${{ env.CONTAINER_REGISTRY }}' (cleanup_level=${{ github.event.inputs.cleanup_level }})"
+            echo "Keeping Container Registry '${{ env.CONTAINER_REGISTRY }}' and all images (cleanup_level=${{ github.event.inputs.cleanup_level }})"
           fi
           
           # Container App Environment cleanup (only for full cleanup or force recreate)
