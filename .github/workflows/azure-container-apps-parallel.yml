@@ -45,18 +45,47 @@ jobs:
         CASE_NAMES="${{ github.event.inputs.case_names }}"
         BLOB_CONTAINER="${{ github.event.inputs.blob_container }}"
         
-        # Create matrix JSON
-        MATRIX=$(echo "$CASE_NAMES" | tr ',' '\n' | jq -R . | jq -s --arg container "$BLOB_CONTAINER" '{
-          "include": [.[] | {
-            "case_name": .,
-            "input_folder": ("inputs/" + .),
-            "blob_container": $container
-          }]
-        }')
+        echo "Input case names: $CASE_NAMES"
+        echo "Blob container: $BLOB_CONTAINER"
         
-        echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-        echo "Generated matrix:"
-        echo "$MATRIX" | jq .
+        # Create matrix JSON using a simpler approach
+        MATRIX_JSON=$(cat << EOF
+        {
+          "include": [
+        EOF
+        )
+        
+        # Add each case to the matrix
+        IFS=',' read -ra CASES <<< "$CASE_NAMES"
+        for i in "${!CASES[@]}"; do
+          CASE_NAME=$(echo "${CASES[$i]}" | xargs)  # trim whitespace
+          if [ $i -gt 0 ]; then
+            MATRIX_JSON="$MATRIX_JSON,"
+          fi
+          MATRIX_JSON="$MATRIX_JSON
+            {
+              \"case_name\": \"$CASE_NAME\",
+              \"input_folder\": \"inputs/$CASE_NAME\",
+              \"blob_container\": \"$BLOB_CONTAINER\"
+            }"
+        done
+        
+        MATRIX_JSON="$MATRIX_JSON
+          ]
+        }"
+        
+        echo "Generated matrix JSON:"
+        echo "$MATRIX_JSON"
+        
+        # Validate JSON format
+        echo "$MATRIX_JSON" | jq . > /dev/null
+        if [ $? -eq 0 ]; then
+          echo "JSON is valid"
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+        else
+          echo "JSON is invalid, exiting"
+          exit 1
+        fi
 
   run-parallel-genx:
     needs: prepare-matrix
