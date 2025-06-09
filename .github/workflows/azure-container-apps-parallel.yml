@@ -56,30 +56,23 @@ env:
   CONTAINER_APP_ENV: genx-env
 
 jobs:
-  setup:
+  setup-infrastructure:
     runs-on: ubuntu-latest
     outputs:
-      case-matrix: ${{ steps.parse-cases.outputs.cases }}
+      registry-ready: ${{ steps.registry.outputs.ready }}
       registry-name: ${{ steps.setup-vars.outputs.registry }}
-      image-name: ${{ steps.setup-vars.outputs.image }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Parse case names into matrix
-        id: parse-cases
-        run: |
-          cases="${{ github.event.inputs.case_names }}"
-          # Convert comma-separated string to JSON array (compact format)
-          json_array=$(echo "$cases" | jq -R -c 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$"; ""))')
-          echo "cases=$json_array" >> $GITHUB_OUTPUT
-          echo "Parsed cases: $json_array"
 
       - name: Setup variables
         id: setup-vars
         run: |
           echo "registry=${{ env.CONTAINER_REGISTRY }}" >> $GITHUB_OUTPUT
-          echo "image=${{ env.CONTAINER_REGISTRY }}.azurecr.io/genx:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "📋 Infrastructure Configuration:"
+          echo "  Registry: ${{ env.CONTAINER_REGISTRY }}"
+          echo "  Resource Group: ${{ env.AZURE_RESOURCE_GROUP }}"
+          echo "  Location: ${{ env.AZURE_LOCATION }}"
 
       - name: Azure Login
         uses: azure/login@v1
@@ -87,28 +80,145 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Create or use existing Azure Container Registry
+        id: registry
         run: |
           # Check if registry already exists
           if az acr show --name ${{ env.CONTAINER_REGISTRY }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} &>/dev/null; then
-            echo "Container Registry ${{ env.CONTAINER_REGISTRY }} already exists, reusing it"
+            echo "✅ Container Registry ${{ env.CONTAINER_REGISTRY }} already exists, reusing it"
+            echo "ready=true" >> $GITHUB_OUTPUT
           else
-            echo "Creating Container Registry ${{ env.CONTAINER_REGISTRY }}"
+            echo "🏗️ Creating Container Registry ${{ env.CONTAINER_REGISTRY }}"
             az acr create \
               --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
               --name ${{ env.CONTAINER_REGISTRY }} \
               --sku Basic \
               --admin-enabled true \
               --location ${{ env.AZURE_LOCATION }}
+            echo "✅ Container Registry created successfully"
+            echo "ready=true" >> $GITHUB_OUTPUT
+          fi
+
+  setup-environment:
+    runs-on: ubuntu-latest
+    outputs:
+      environment-ready: ${{ steps.env-check.outputs.ready }}
+      environment-name: ${{ steps.env-check.outputs.name }}
+    steps:
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Check Container App Environment
+        id: env-check
+        run: |
+          echo "🔍 Checking Container App Environment ${{ env.CONTAINER_APP_ENV }}"
+          if az containerapp env show --name ${{ env.CONTAINER_APP_ENV }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} &>/dev/null; then
+            echo "✅ Container App Environment ${{ env.CONTAINER_APP_ENV }} exists and ready"
+            echo "ready=true" >> $GITHUB_OUTPUT
+            echo "name=${{ env.CONTAINER_APP_ENV }}" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Container App Environment ${{ env.CONTAINER_APP_ENV }} not found"
+            echo "Please ensure the environment exists before running jobs"
+            exit 1
+          fi
+
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      case-matrix: ${{ steps.parse-cases.outputs.cases }}
+    steps:
+      - name: Parse case names into matrix
+        id: parse-cases
+        run: |
+          cases="${{ github.event.inputs.case_names }}"
+          # Convert comma-separated string to JSON array (compact format)
+          json_array=$(echo "$cases" | jq -R -c 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$"; ""))')
+          echo "cases=$json_array" >> $GITHUB_OUTPUT
+          echo "📋 Parsed cases: $json_array"
+
+  build-image:
+    needs: [setup-infrastructure, setup-matrix]
+    runs-on: ubuntu-latest
+    outputs:
+      image-name: ${{ steps.setup-vars.outputs.image }}
+      build-needed: ${{ steps.check-build.outputs.build_needed }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup image variables
+        id: setup-vars
+        run: |
+          echo "image=${{ env.CONTAINER_REGISTRY }}.azurecr.io/genx:${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "📋 Image Configuration:"
+          echo "  Registry: ${{ env.CONTAINER_REGISTRY }}"
+          echo "  Image: ${{ env.CONTAINER_REGISTRY }}.azurecr.io/genx:${{ github.sha }}"
+          echo "  Commit: ${{ github.sha }}"
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Check if Docker image build needed
+        id: check-build
+        run: |
+          # Login to ACR first to check for existing images
+          az acr login --name ${{ env.CONTAINER_REGISTRY }}
+          
+          # Check if image with current commit SHA already exists
+          IMAGE_EXISTS=$(az acr repository show-tags \
+            --name ${{ env.CONTAINER_REGISTRY }} \
+            --repository genx \
+            --query "contains(@, '${{ github.sha }}')" \
+            --output tsv 2>/dev/null || echo "false")
+          
+          # Check if critical build files have changed in recent commits
+          DOCKERFILE_CHANGED=$(git diff --name-only HEAD~3..HEAD | grep -E "(Dockerfile|Project\.toml|Manifest\.toml)" || echo "")
+          
+          if [ "$IMAGE_EXISTS" = "true" ] && [ -z "$DOCKERFILE_CHANGED" ]; then
+            echo "✅ Docker image for commit ${{ github.sha }} already exists and no build dependencies changed"
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+            echo "reason=image_exists" >> $GITHUB_OUTPUT
+            echo "Image already available: ${{ steps.setup-vars.outputs.image }}"
+          elif [ "$IMAGE_EXISTS" = "true" ] && [ -n "$DOCKERFILE_CHANGED" ]; then
+            echo "🔄 Image exists but critical files changed: $DOCKERFILE_CHANGED"
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+            echo "reason=files_changed" >> $GITHUB_OUTPUT
+          else
+            echo "🔨 Docker image for commit ${{ github.sha }} not found, build required"
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+            echo "reason=image_missing" >> $GITHUB_OUTPUT
+            echo "Will build new image: ${{ steps.setup-vars.outputs.image }}"
           fi
 
       - name: Build and push Docker image
+        if: steps.check-build.outputs.skip_build != 'true'
         run: |
-          # Login to ACR
-          az acr login --name ${{ env.CONTAINER_REGISTRY }}
+          echo "🔨 Building Docker image..."
+          echo "Reason: ${{ steps.check-build.outputs.reason }}"
+          START_TIME=$(date +%s)
+          
+          # ACR login already done in previous step
           
           # Build and push image
           docker build -t ${{ steps.setup-vars.outputs.image }} .
           docker push ${{ steps.setup-vars.outputs.image }}
+          
+          END_TIME=$(date +%s)
+          BUILD_TIME=$((END_TIME - START_TIME))
+          echo "✅ Docker image built and pushed successfully"
+          echo "⏱️ Build time: ${BUILD_TIME} seconds"
+
+      - name: Skip build notification
+        if: steps.check-build.outputs.skip_build == 'true'
+        run: |
+          echo "⏭️ Skipped Docker build - using existing image"
+          echo "Reason: ${{ steps.check-build.outputs.reason }}"
+          echo "💰 Time saved: ~2-3 minutes"
+          echo "💾 Storage saved: ~500MB-1GB (no duplicate layers)"
+          echo "🎯 Using cached image: ${{ steps.setup-vars.outputs.image }}"
 
       - name: Create Container App Environment
         run: |
@@ -118,12 +228,12 @@ jobs:
             --location ${{ env.AZURE_LOCATION }}
 
   run-parallel-jobs:
-    needs: setup
+    needs: [setup-infrastructure, setup-environment, setup-matrix, build-image]
     runs-on: ubuntu-latest
     strategy:
       max-parallel: ${{ fromJson(github.event.inputs.max_parallel) }}
       matrix:
-        case: ${{ fromJson(needs.setup.outputs.case-matrix) }}
+        case: ${{ fromJson(needs.setup-matrix.outputs.case-matrix) }}
     steps:
       - name: Azure Login
         uses: azure/login@v1
@@ -165,16 +275,16 @@ jobs:
           fi
           
           # Get ACR credentials
-          ACR_SERVER="${{ needs.setup.outputs.registry-name }}.azurecr.io"
-          ACR_USERNAME=$(az acr credential show --name ${{ needs.setup.outputs.registry-name }} --query username -o tsv)
-          ACR_PASSWORD=$(az acr credential show --name ${{ needs.setup.outputs.registry-name }} --query passwords[0].value -o tsv)
+          ACR_SERVER="${{ needs.setup-infrastructure.outputs.registry-name }}.azurecr.io"
+          ACR_USERNAME=$(az acr credential show --name ${{ needs.setup-infrastructure.outputs.registry-name }} --query username -o tsv)
+          ACR_PASSWORD=$(az acr credential show --name ${{ needs.setup-infrastructure.outputs.registry-name }} --query passwords[0].value -o tsv)
           
           # Create Container App Job
           az containerapp job create \
             --name "$JOB_NAME" \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --environment ${{ env.CONTAINER_APP_ENV }} \
-            --image "${{ needs.setup.outputs.image-name }}" \
+            --environment ${{ needs.setup-environment.outputs.environment-name }} \
+            --image "${{ needs.build-image.outputs.image-name }}" \
             --registry-server "$ACR_SERVER" \
             --registry-username "$ACR_USERNAME" \
             --registry-password "$ACR_PASSWORD" \
@@ -262,7 +372,7 @@ jobs:
           retention-days: 7
 
   cleanup:
-    needs: [setup, run-parallel-jobs]
+    needs: [setup-infrastructure, run-parallel-jobs]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -327,7 +437,7 @@ jobs:
           fi
 
   summary:
-    needs: [setup, run-parallel-jobs]
+    needs: [setup-infrastructure, setup-environment, setup-matrix, build-image, run-parallel-jobs]
     runs-on: ubuntu-latest
     if: always()
     steps:
