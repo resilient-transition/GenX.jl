@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies for Azure Blob Storage
-RUN pip3 install azure-storage-blob azure-identity
+RUN pip3 install --break-system-packages azure-storage-blob azure-identity
 
 # Set working directory
 WORKDIR /genx
