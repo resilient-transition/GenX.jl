@@ -7,6 +7,17 @@ on:
     types: [blob-upload]
   workflow_dispatch:
     inputs:
+  # Only run on the 5.001/dev branch
+  push:
+    branches: ['5.001/dev']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: ['5.001/dev']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
       blob_container:
         description: 'Azure Blob Storage container name'
         required: true
@@ -38,7 +49,7 @@ jobs:
     - name: Set up Julia
       uses: julia-actions/setup-julia@v1
       with:
-        version: '1.9'  # Using recommended version from README
+        version: '1.11'  # Using recommended version from README
 
     - name: Set up Python
       uses: actions/setup-python@v4
