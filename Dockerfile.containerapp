@@ -1,0 +1,131 @@
+# Multi-stage build for GenX.jl on Azure Container Apps
+FROM julia:1.9 as julia-base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    unzip \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Azure CLI
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+# Set working directory
+WORKDIR /app
+
+# Copy project files
+COPY Project.toml Manifest.toml ./
+COPY src/ ./src/
+COPY Run.jl ./
+
+# Install Julia dependencies
+RUN julia --project=. -e 'using Pkg; Pkg.instantiate()'
+RUN julia --project=. -e 'using Pkg; Pkg.precompile()'
+
+# Install Python dependencies
+COPY pyproject.toml ./
+RUN pip3 install azure-storage-blob pandas loguru upath requests
+
+# Copy utility scripts
+COPY scripts/ ./scripts/
+
+# Create entrypoint script
+RUN cat > /app/entrypoint.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "Starting GenX Container App Job"
+echo "Case Name: ${CASE_NAME}"
+echo "Input Folder: ${INPUT_FOLDER}"
+echo "Blob Container: ${BLOB_CONTAINER}"
+echo "GitHub SHA: ${GITHUB_SHA}"
+
+# Create cases directory
+mkdir -p ./cases/${CASE_NAME}
+
+# Download input data from Azure Blob Storage
+echo "Downloading input data..."
+az storage blob download-batch \
+  --destination ./cases/${CASE_NAME} \
+  --source ${BLOB_CONTAINER} \
+  --pattern "${INPUT_FOLDER}/*" \
+  --account-name ${AZURE_STORAGE_ACCOUNT} \
+  --account-key "${AZURE_STORAGE_KEY}"
+
+echo "Downloaded files:"
+find ./cases/${CASE_NAME} -type f -name "*.csv" | head -20
+
+# Validate input files
+if [ ! -d "./cases/${CASE_NAME}" ] || [ -z "$(ls -A ./cases/${CASE_NAME})" ]; then
+  echo "Error: No input files found for case ${CASE_NAME}"
+  exit 1
+fi
+
+echo "Starting GenX model run..."
+echo "Working directory: $(pwd)"
+
+# Run the GenX model
+julia --project=. Run.jl "./cases/${CASE_NAME}"
+
+echo "GenX model run completed successfully"
+
+# Prepare results for upload
+echo "Preparing results for upload..."
+mkdir -p ./upload_results
+
+# Copy all results files
+if [ -d "./cases/${CASE_NAME}/results" ]; then
+  cp -r ./cases/${CASE_NAME}/results/* ./upload_results/
+else
+  echo "Warning: No results directory found, searching for results files..."
+  find ./cases/${CASE_NAME} -name "*.csv" -path "*/results/*" -exec cp {} ./upload_results/ \; || true
+fi
+
+# Create a run summary
+echo "GenX Container App Run Summary" > ./upload_results/run_summary.txt
+echo "Case Name: ${CASE_NAME}" >> ./upload_results/run_summary.txt
+echo "Run Date: $(date)" >> ./upload_results/run_summary.txt
+echo "Commit SHA: ${GITHUB_SHA}" >> ./upload_results/run_summary.txt
+echo "Container: Azure Container Apps" >> ./upload_results/run_summary.txt
+echo "" >> ./upload_results/run_summary.txt
+echo "Results Files:" >> ./upload_results/run_summary.txt
+ls -la ./upload_results/ >> ./upload_results/run_summary.txt
+
+echo "Results prepared:"
+ls -la ./upload_results/
+
+# Upload results to Azure Blob Storage
+echo "Uploading results..."
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+RESULTS_FOLDER="results/${CASE_NAME}_${TIMESTAMP}"
+
+az storage blob upload-batch \
+  --destination ${BLOB_CONTAINER} \
+  --destination-path "${RESULTS_FOLDER}" \
+  --source ./upload_results \
+  --account-name ${AZURE_STORAGE_ACCOUNT} \
+  --account-key "${AZURE_STORAGE_KEY}"
+
+echo "Results uploaded to: ${RESULTS_FOLDER}"
+
+# List uploaded files for confirmation
+echo "Uploaded files:"
+az storage blob list \
+  --container-name ${BLOB_CONTAINER} \
+  --prefix "${RESULTS_FOLDER}" \
+  --account-name ${AZURE_STORAGE_ACCOUNT} \
+  --account-key "${AZURE_STORAGE_KEY}" \
+  --output table
+
+echo "GenX Container App job completed successfully!"
+EOF
+
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/app/entrypoint.sh"]
+
