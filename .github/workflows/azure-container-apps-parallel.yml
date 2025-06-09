@@ -27,6 +27,25 @@ on:
         required: false
         default: '5'
         type: string
+      cleanup_level:
+        description: 'Cleanup level: jobs-only, registries, or full'
+        required: false
+        default: 'jobs-only'
+        type: choice
+        options:
+          - jobs-only
+          - registries  
+          - full
+      force_env_recreate:
+        description: 'Force Container App Environment recreation (use only for debugging)'
+        required: false
+        default: false
+        type: boolean
+      cleanup_registry:
+        description: 'Delete Container Registry after run (true/false)'
+        required: false
+        default: 'true'
+        type: string
 
 env:
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
@@ -248,17 +267,45 @@ jobs:
 
       - name: Cleanup Azure resources
         run: |
-          # Delete Container App Environment (this will also delete jobs)
-          az containerapp env delete \
-            --name ${{ env.CONTAINER_APP_ENV }} \
+          echo "=== Cleaning up deployment-specific resources ==="
+          echo "Cleanup level: ${{ github.event.inputs.cleanup_level }}"
+          
+          # Always delete Container App Jobs from this run
+          echo "Deleting Container App Jobs from this deployment..."
+          az containerapp job list \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --yes || true
-
-          # Delete Container Registry
-          az acr delete \
-            --name ${{ env.CONTAINER_REGISTRY }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --yes || true
+            --query "[?contains(name, 'genx-') && contains(name, '-${{ github.run_number }}')].name" \
+            --output tsv | while read job_name; do
+            if [ -n "$job_name" ]; then
+              echo "Deleting job: $job_name"
+              az containerapp job delete \
+                --name "$job_name" \
+                --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                --yes || true
+            fi
+          done
+          
+          # Container Registry cleanup based on level
+          if [ "${{ github.event.inputs.cleanup_level }}" = "registries" ] || [ "${{ github.event.inputs.cleanup_level }}" = "full" ]; then
+            echo "Deleting Container Registry '${{ env.CONTAINER_REGISTRY }}'..."
+            az acr delete \
+              --name ${{ env.CONTAINER_REGISTRY }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --yes || true
+          else
+            echo "Keeping Container Registry '${{ env.CONTAINER_REGISTRY }}' (cleanup_level=${{ github.event.inputs.cleanup_level }})"
+          fi
+          
+          # Container App Environment cleanup (only for full cleanup or force recreate)
+          if [ "${{ github.event.inputs.cleanup_level }}" = "full" ] || [ "${{ github.event.inputs.force_env_recreate }}" = "true" ]; then
+            echo "WARNING: Deleting Container App Environment '${{ env.CONTAINER_APP_ENV }}'..."
+            az containerapp env delete \
+              --name ${{ env.CONTAINER_APP_ENV }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --yes || true
+          else
+            echo "Keeping Container App Environment '${{ env.CONTAINER_APP_ENV }}' for reuse (cleanup_level=${{ github.event.inputs.cleanup_level }})"
+          fi
 
   summary:
     needs: [setup, run-parallel-jobs]
