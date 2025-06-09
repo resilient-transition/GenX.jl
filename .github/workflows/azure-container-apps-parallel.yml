@@ -29,11 +29,11 @@ on:
 
 env:
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-  AZURE_LOCATION: eastus
+  AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
   AZURE_STORAGE_ACCOUNT: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
   AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
   CONTAINER_REGISTRY: genxregistry${{ github.run_number }}
-  CONTAINER_APP_ENV: genx-env  # Use existing environment
+  CONTAINER_APP_ENV: genx-env-${{ github.run_number }}
 
 jobs:
   setup:
@@ -50,8 +50,8 @@ jobs:
         id: parse-cases
         run: |
           cases="${{ github.event.inputs.case_names }}"
-          # Convert comma-separated string to JSON array (compact format)
-          json_array=$(echo "$cases" | jq -R -c 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$"; ""))')
+          # Convert comma-separated string to JSON array
+          json_array=$(echo "$cases" | jq -R 'split(",") | map(select(length > 0))')
           echo "cases=$json_array" >> $GITHUB_OUTPUT
           echo "Parsed cases: $json_array"
 
@@ -86,30 +86,10 @@ jobs:
 
       - name: Create Container App Environment
         run: |
-          # Check if environment already exists
-          if az containerapp env show --name ${{ env.CONTAINER_APP_ENV }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} &>/dev/null; then
-            echo "Container App Environment ${{ env.CONTAINER_APP_ENV }} already exists, skipping creation"
-          else
-            echo "Creating Container App Environment ${{ env.CONTAINER_APP_ENV }}"
-            # Try to create environment, handle quota errors gracefully
-            if ! az containerapp env create \
-              --name ${{ env.CONTAINER_APP_ENV }} \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --location ${{ env.AZURE_LOCATION }}; then
-              
-              echo "Failed to create new environment. Checking for existing environments..."
-              existing_env=$(az containerapp env list --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query '[0].name' -o tsv 2>/dev/null || echo "")
-              
-              if [ -n "$existing_env" ]; then
-                echo "Using existing environment: $existing_env"
-                echo "CONTAINER_APP_ENV=$existing_env" >> $GITHUB_ENV
-              else
-                echo "No existing environments found. This may be a subscription quota limit."
-                echo "Please check your Azure subscription Container App Environment limits."
-                exit 1
-              fi
-            fi
-          fi
+          az containerapp env create \
+            --name ${{ env.CONTAINER_APP_ENV }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --location ${{ env.AZURE_LOCATION }}
 
   run-parallel-jobs:
     needs: setup
@@ -127,7 +107,9 @@ jobs:
       - name: Create and run Container App Job
         id: run-job
         run: |
-          JOB_NAME="genx-${{ matrix.case }}-${{ github.run_number }}"
+          # Create Azure-compliant job name (replace underscores with hyphens, ensure < 32 chars)
+          CASE_CLEAN=$(echo "${{ matrix.case }}" | tr '_' '-' | tr '[:upper:]' '[:lower:]')
+          JOB_NAME="genx-${CASE_CLEAN}-${{ github.run_number }}"
           
           # Get ACR credentials
           ACR_SERVER="${{ needs.setup.outputs.registry-name }}.azurecr.io"
