@@ -50,8 +50,8 @@ jobs:
         id: parse-cases
         run: |
           cases="${{ github.event.inputs.case_names }}"
-          # Convert comma-separated string to JSON array
-          json_array=$(echo "$cases" | jq -R 'split(",") | map(select(length > 0))')
+          # Convert comma-separated string to JSON array (compact format)
+          json_array=$(echo "$cases" | jq -R -c 'split(",") | map(select(length > 0) | gsub("^\\s+|\\s+$"; ""))')
           echo "cases=$json_array" >> $GITHUB_OUTPUT
           echo "Parsed cases: $json_array"
 
