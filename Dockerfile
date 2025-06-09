@@ -1,5 +1,5 @@
 # Multi-stage build for GenX.jl with Azure Blob Storage integration
-FROM julia:1.9 as builder
+FROM julia:1.11 as builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -19,7 +19,7 @@ COPY Project.toml Manifest.toml ./
 RUN julia -e "using Pkg; Pkg.instantiate(); Pkg.precompile()"
 
 # Final stage
-FROM julia:1.9-slim
+FROM julia:1.11
 
 # Install system dependencies including Azure CLI
 RUN apt-get update && apt-get install -y \
