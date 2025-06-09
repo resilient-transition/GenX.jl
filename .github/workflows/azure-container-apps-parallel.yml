@@ -108,22 +108,32 @@ jobs:
       - name: Create and run Container App Job
         id: run-job
         run: |
+          # Debug: Show initial case name
+          echo "=== JOB NAME TRANSFORMATION DEBUG ==="
+          echo "Original matrix.case: ${{ matrix.case }}"
+          echo "Run number: ${{ github.run_number }}"
+          
           # Create Azure-compliant job name (replace underscores with hyphens, ensure < 32 chars)
           CASE_CLEAN=$(echo "${{ matrix.case }}" | tr '_' '-' | tr '[:upper:]' '[:lower:]')
           RUN_NUM="${{ github.run_number }}"
+          
+          echo "After transformation: $CASE_CLEAN"
           
           # Calculate max case name length (32 - "genx-" - "-" - run_number)
           MAX_CASE_LEN=$((32 - 5 - 1 - ${#RUN_NUM}))
           
           # Truncate case name if too long, keeping meaningful part
           if [ ${#CASE_CLEAN} -gt $MAX_CASE_LEN ]; then
+            echo "Case name too long, truncating from ${#CASE_CLEAN} to $MAX_CASE_LEN chars"
             CASE_CLEAN=$(echo "$CASE_CLEAN" | cut -c1-$MAX_CASE_LEN)
           fi
           
           JOB_NAME="genx-${CASE_CLEAN}-${RUN_NUM}"
           
           # Verify final name length and compliance
-          echo "Job name: $JOB_NAME (length: ${#JOB_NAME})"
+          echo "Final job name: $JOB_NAME (length: ${#JOB_NAME})"
+          echo "=== END DEBUG ==="
+          
           if [ ${#JOB_NAME} -gt 32 ]; then
             echo "ERROR: Job name exceeds 32 characters"
             exit 1
