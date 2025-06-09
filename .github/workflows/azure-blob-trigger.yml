@@ -7,17 +7,6 @@ on:
     types: [blob-upload]
   workflow_dispatch:
     inputs:
-  # Only run on the 5.001/dev branch
-  push:
-    branches: ['5.001/dev']
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-  pull_request:
-    branches: ['5.001/dev']
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
       blob_container:
         description: 'Azure Blob Storage container name'
         required: true
