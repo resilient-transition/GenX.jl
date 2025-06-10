@@ -1,4 +1,4 @@
-name: Docker Build and Test
+name: Docker Build, Test and Deploy
 
 on:
   push:
@@ -7,9 +7,14 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  REGISTRY_NAME: genxjlregistry
+  IMAGE_NAME: genx-jl
+  RESOURCE_GROUP: genx-rg
+
 jobs:
   docker-test:
-    name: Build and Test Docker Container
+    name: Build, Test and Deploy Docker Container
     runs-on: ubuntu-latest
     
     steps:
@@ -18,51 +23,65 @@ jobs:
       
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+
+    - name: Generate image tags
+      id: meta
+      run: |
+        # Generate tags for the image
+        echo "tags=genx-test:latest,genx-test:${{ github.sha }}" >> $GITHUB_OUTPUT
+        echo "sha-short=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
       
-    - name: Build Docker image
+    - name: Build Docker image for testing
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfile
         push: false
         load: true
-        tags: genx-test:latest
+        tags: ${{ steps.meta.outputs.tags }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         
     - name: Test Docker container
       run: |
         echo "🧪 Testing Docker container with GenX three-zone example..."
+        echo "📊 Container: genx-test:${{ steps.meta.outputs.sha-short }}"
+        echo ""
         
-        # Run the container and capture output and exit code
-        set +e  # Don't exit on error
-        timeout 300 docker run --memory=4g --memory-swap=4g --name genx-test genx-test:latest > docker_output.log 2>&1
+        # Run the container with real-time log following
+        # Use timeout and resource limits for safety
+        set +e  # Don't exit on error immediately
+        timeout 300 docker run --memory=4g --memory-swap=4g --name genx-test genx-test:latest
         DOCKER_EXIT_CODE=$?
         set -e  # Re-enable exit on error
         
-        # Show container logs for debugging
-        echo "📋 Container output:"
-        echo "==================="
-        cat docker_output.log || echo "No output file found"
+        echo ""
+        echo "📋 Container Exit Code: $DOCKER_EXIT_CODE"
         
         # Check if the container ran successfully
         if [ $DOCKER_EXIT_CODE -eq 0 ]; then
           echo "✅ Container executed successfully"
         elif [ $DOCKER_EXIT_CODE -eq 124 ]; then
           echo "❌ Container execution timed out (5 minutes)"
+          # Get logs from the container even if it timed out
+          echo "📋 Container logs from timeout:"
+          docker logs genx-test || true
           exit 1
         else
           echo "❌ Container execution failed with exit code $DOCKER_EXIT_CODE"
+          # Get logs from the failed container
+          echo "📋 Container logs from failure:"
+          docker logs genx-test || true
           exit 1
         fi
         
-        # Extract key metrics from the output
+        # Extract container logs for analysis
         echo ""
-        echo "📊 Test Results:"
-        echo "==============="
+        echo "🔍 Analyzing results..."
+        CONTAINER_LOGS=$(docker logs genx-test 2>&1)
         
         # Check for successful completion
-        if grep -q "Wrote outputs to" docker_output.log; then
+        if echo "$CONTAINER_LOGS" | grep -q "Wrote outputs to"; then
           echo "✅ GenX optimization completed successfully"
         else
           echo "❌ GenX optimization did not complete"
@@ -70,41 +89,95 @@ jobs:
         fi
         
         # Extract objective value
-        OBJECTIVE=$(grep -o "objective value.*[0-9]\+\.[0-9]\+e+[0-9]\+" docker_output.log | tail -1 | grep -o "[0-9]\+\.[0-9]\+e+[0-9]\+")
+        OBJECTIVE=$(echo "$CONTAINER_LOGS" | grep -o "objective value.*[0-9]\+\.[0-9]\+e+[0-9]\+" | tail -1 | grep -o "[0-9]\+\.[0-9]\+e+[0-9]\+" || true)
         if [ ! -z "$OBJECTIVE" ]; then
           echo "💰 Objective value: $OBJECTIVE"
         fi
         
         # Extract solve time
-        SOLVE_TIME=$(grep -o "HiGHS run time.*[0-9]\+\.[0-9]\+" docker_output.log | tail -1 | grep -o "[0-9]\+\.[0-9]\+")
+        SOLVE_TIME=$(echo "$CONTAINER_LOGS" | grep -o "HiGHS run time.*[0-9]\+\.[0-9]\+" | tail -1 | grep -o "[0-9]\+\.[0-9]\+" || true)
         if [ ! -z "$SOLVE_TIME" ]; then
           echo "⏱️  Solve time: ${SOLVE_TIME}s"
         fi
         
         # Check for resource loading
-        RESOURCES=$(grep -o "Total number of resources: [0-9]\+" docker_output.log | tail -1 | grep -o "[0-9]\+")
+        RESOURCES=$(echo "$CONTAINER_LOGS" | grep -o "Total number of resources: [0-9]\+" | tail -1 | grep -o "[0-9]\+" || true)
         if [ ! -z "$RESOURCES" ]; then
           echo "🔌 Resources loaded: $RESOURCES"
         fi
         
-        # Check environment variable is working (should not see extra precompilation)
-        if grep -q "GENX_PRECOMPILE=false" docker_output.log; then
+        # Check environment variable is working
+        if echo "$CONTAINER_LOGS" | grep -q "GENX_PRECOMPILE=false"; then
           echo "🔧 GENX_PRECOMPILE environment variable detected"
         fi
         
         echo ""
         echo "🎉 All tests passed!"
+
+    - name: Azure Login
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to Azure Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "🔐 Logging into Azure Container Registry..."
+        # Ensure ACR exists (create if it doesn't)
+        az acr create \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --name ${{ env.REGISTRY_NAME }} \
+          --sku Basic \
+          --admin-enabled true || true
+        
+        # Login to ACR
+        az acr login --name ${{ env.REGISTRY_NAME }}
+
+    - name: Get ACR login server
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      id: acr-login-server
+      run: |
+        ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
+        echo "acr-login-server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+        echo "🏷️  ACR Login Server: $ACR_LOGIN_SERVER"
+
+    - name: Build and push to Azure Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: |
+          ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:latest
+          ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Show deployment info
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "🚀 Docker image successfully pushed to Azure Container Registry!"
+        echo "📋 Image tags:"
+        echo "   • ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:latest"
+        echo "   • ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        echo "   • ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}"
+        echo ""
+        echo "🔗 ACR Repository: ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}"
         
     - name: Show container logs on failure
       if: failure()
       run: |
-        echo "📋 Container output:"
-        echo "==================="
-        cat docker_output.log || echo "No output file found"
+        echo "📋 Container logs:"
+        echo "=================="
+        docker logs genx-test || echo "No container logs available"
         
     - name: Cleanup
       if: always()
       run: |
-        # Remove test container and image
+        # Remove test container
         docker rm genx-test || true
-        docker rmi genx-test:latest || true
+        # Keep the local test image for caching, only remove if we want to save space
+        # docker rmi genx-test:latest || true
