@@ -260,18 +260,16 @@ jobs:
         
         echo "✅ Event Grid subscription created"
 
+    - name: Setup Python 3.11 for Function Deployment
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
     - name: Deploy Function App Code
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         echo "🚀 Deploying Function App code..."
-        
-        # Set up Python 3.11 for Azure Functions deployment
-        sudo apt-get update
-        sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
-        
-        # Create a Python 3.11 virtual environment
-        python3.11 -m venv venv311
-        source venv311/bin/activate
         
         # Verify Python version
         echo "Using Python version: $(python --version)"
@@ -279,7 +277,7 @@ jobs:
         # Install Azure Functions Core Tools
         npm install -g azure-functions-core-tools@4 --unsafe-perm true
         
-        # Install Python dependencies in the virtual environment
+        # Install Python dependencies
         cd azure-function
         if [ -f requirements.txt ]; then
           pip install -r requirements.txt
