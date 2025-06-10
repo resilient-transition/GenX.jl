@@ -143,10 +143,13 @@ def create_genx_container(container_name: str, case_name: str, blob_path: str) -
             EnvironmentVariable(name="JULIA_NUM_THREADS", value="auto"),
         ]
         
+        # Get image tag from environment (commit SHA)
+        image_tag = os.environ.get('GENX_IMAGE_TAG', 'latest')
+        
         # Define container configuration
         container = Container(
             name=container_name,
-            image=f"{registry_server}/genx-jl:latest",
+            image=f"{registry_server}/genx-jl:{image_tag}",
             resources=ResourceRequirements(
                 requests=ResourceRequests(
                     memory_in_gb=8.0,
@@ -209,28 +212,39 @@ account_key = os.environ['AZURE_STORAGE_KEY']
 account_url = f'https://{account_name}.blob.core.windows.net'
 blob_service_client = BlobServiceClient(account_url=account_url, credential=account_key)
 
-# Upload results
+# Upload results from both results/ and TDR_results/ directories
 case_name = os.environ['GENX_CASE_NAME']
-results_dir = Path(f'/app/cases/{case_name}/results')
+case_dir = Path(f'/app/cases/{case_name}')
 
-if results_dir.exists():
-    container_name = 'results'
+# Define result directories to upload
+result_dirs = ['results', 'TDR_results']
+uploaded_files = 0
+
+for result_subdir in result_dirs:
+    results_dir = case_dir / result_subdir
     
-    for file_path in results_dir.rglob('*'):
-        if file_path.is_file():
-            relative_path = file_path.relative_to(results_dir)
-            blob_name = f'{case_name}/results/{relative_path}'
-            blob_name = blob_name.replace('\\\\', '/')
-            
-            blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
-            
-            with open(file_path, 'rb') as data:
-                blob_client.upload_blob(data, overwrite=True)
-            print(f'Uploaded: {blob_name}')
-    
-    print(f'Results uploaded successfully for case: {case_name}')
+    if results_dir.exists():
+        print(f'Uploading {result_subdir} for case: {case_name}')
+        container_name = 'results'
+        
+        for file_path in results_dir.rglob('*'):
+            if file_path.is_file():
+                relative_path = file_path.relative_to(case_dir)
+                blob_name = f'{case_name}/{relative_path}'.replace('\\\\', '/')
+                
+                blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+                
+                with open(file_path, 'rb') as data:
+                    blob_client.upload_blob(data, overwrite=True)
+                print(f'Uploaded: {blob_name}')
+                uploaded_files += 1
+    else:
+        print(f'Directory {result_subdir} not found for case: {case_name}')
+
+if uploaded_files > 0:
+    print(f'Successfully uploaded {uploaded_files} result files for case: {case_name}')
 else:
-    print(f'No results directory found for case: {case_name}')
+    print(f'No result files found for case: {case_name}')
     exit(1)
 "
                 

@@ -9,6 +9,7 @@ dependencies = [
     "azure-functions>=1.23.0",
     "azure-identity>=1.23.0",
     "azure-mgmt-containerinstance>=10.1.0",
+    "azure-mgmt-storage>=21.0.0",
     "azure-storage-blob>=12.25.1",
     "black[jupyter]>=25.1.0",
     "joblib>=1.5.1",
