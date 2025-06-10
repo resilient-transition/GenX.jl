@@ -1,0 +1,98 @@
+name: Docker Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  docker-test:
+    name: Build and Test Docker Container
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: false
+        tags: genx-test:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Test Docker container
+      run: |
+        echo "🧪 Testing Docker container with GenX three-zone example..."
+        
+        # Run the container and capture output
+        docker run --name genx-test genx-test:latest > docker_output.log 2>&1
+        
+        # Check if the container ran successfully
+        if [ $? -eq 0 ]; then
+          echo "✅ Container executed successfully"
+        else
+          echo "❌ Container execution failed"
+          exit 1
+        fi
+        
+        # Extract key metrics from the output
+        echo ""
+        echo "📊 Test Results:"
+        echo "==============="
+        
+        # Check for successful completion
+        if grep -q "Wrote outputs to" docker_output.log; then
+          echo "✅ GenX optimization completed successfully"
+        else
+          echo "❌ GenX optimization did not complete"
+          exit 1
+        fi
+        
+        # Extract objective value
+        OBJECTIVE=$(grep -o "objective value.*[0-9]\+\.[0-9]\+e+[0-9]\+" docker_output.log | tail -1 | grep -o "[0-9]\+\.[0-9]\+e+[0-9]\+")
+        if [ ! -z "$OBJECTIVE" ]; then
+          echo "💰 Objective value: $OBJECTIVE"
+        fi
+        
+        # Extract solve time
+        SOLVE_TIME=$(grep -o "HiGHS run time.*[0-9]\+\.[0-9]\+" docker_output.log | tail -1 | grep -o "[0-9]\+\.[0-9]\+")
+        if [ ! -z "$SOLVE_TIME" ]; then
+          echo "⏱️  Solve time: ${SOLVE_TIME}s"
+        fi
+        
+        # Check for resource loading
+        RESOURCES=$(grep -o "Total number of resources: [0-9]\+" docker_output.log | tail -1 | grep -o "[0-9]\+")
+        if [ ! -z "$RESOURCES" ]; then
+          echo "🔌 Resources loaded: $RESOURCES"
+        fi
+        
+        # Check environment variable is working (should not see extra precompilation)
+        if grep -q "GENX_PRECOMPILE=false" docker_output.log; then
+          echo "🔧 GENX_PRECOMPILE environment variable detected"
+        fi
+        
+        echo ""
+        echo "🎉 All tests passed!"
+        
+    - name: Show container logs on failure
+      if: failure()
+      run: |
+        echo "📋 Container output:"
+        echo "==================="
+        cat docker_output.log || echo "No output file found"
+        
+    - name: Cleanup
+      if: always()
+      run: |
+        # Remove test container and image
+        docker rm genx-test || true
+        docker rmi genx-test:latest || true
