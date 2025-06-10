@@ -1,64 +1,21 @@
-# Multi-stage build for GenX.jl with Azure Blob Storage integration
-FROM julia:1.11 AS builder
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    git \
-    curl \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
-WORKDIR /genx
-
-# Copy Julia project files
-COPY Project.toml ./
-
-# Install Julia dependencies
-RUN julia -e "using Pkg; Pkg.instantiate(); Pkg.precompile()"
-
-# Final stage
+# Use the official Julia Docker image with a specific version for reproducibility
 FROM julia:1.11
 
-# Install system dependencies including Azure CLI
-RUN apt-get update && apt-get install -y \
-    curl \
-    ca-certificates \
-    unzip \
-    python3 \
-    python3-pip \
-    && curl -sL https://aka.ms/InstallAzureCLIDeb | bash \
-    && rm -rf /var/lib/apt/lists/*
+# Set the working directory
+WORKDIR /app
 
-# Install Python dependencies for Azure Blob Storage
-RUN pip3 install --break-system-packages azure-storage-blob azure-identity
-
-# Set working directory
-WORKDIR /genx
-
-# Copy Julia environment from builder
-COPY --from=builder /usr/local/julia /usr/local/julia
-COPY --from=builder /genx ./
-
-# Copy application code
-COPY src/ ./src/
-COPY Run.jl ./
-COPY startup.sh ./
-
-# Copy any required settings
-COPY __base_settings__/ ./__base_settings__/
-
-# Make startup script executable
-RUN chmod +x startup.sh
-
-# Set environment variables
-ENV JULIA_PROJECT=/genx
-ENV JULIA_DEPOT_PATH=/usr/local/julia
+# Set environment variable to disable GenX precompilation
 ENV GENX_PRECOMPILE=false
 
-# Create directories for input/output
-RUN mkdir -p /genx/case_input /genx/case_output
+# Copy only the required files and folders
+COPY src/ ./src/
+COPY example_systems/1_three_zones/ ./example_systems/1_three_zones/
+COPY Project.toml .
+COPY pyproject.toml .
+COPY Run.jl .
 
-# Use startup script as entrypoint
-CMD ["/genx/startup.sh"]
+# Install Julia dependencies
+RUN julia --project=. -e "using Pkg; Pkg.instantiate(); Pkg.precompile()"
+
+# Set the default command to run the GenX case
+CMD ["julia", "--project=.", "Run.jl", "./example_systems/1_three_zones"]
