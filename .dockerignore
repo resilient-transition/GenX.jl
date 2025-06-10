@@ -1,0 +1,71 @@
+# Git and GitHub
+.git
+.github
+.gitignore
+.gitattributes
+
+# Julia package files (let Julia resolve dependencies)
+Manifest.toml
+
+# Documentation
+docs/
+*.md
+README.md
+CHANGELOG.md
+LICENSE
+
+# Test files
+test/
+*_test.jl
+runtests.jl
+*.xls*
+
+# Jupyter notebooks and development files
+*.ipynb
+runner*.ipynb
+dispatch.ipynb
+Untitled.ipynb
+
+# Python cache and environments
+__pycache__/
+*.pyc
+*.pyo
+.python-version
+.venv/
+uv.lock
+
+# Case data (we'll download from blob storage)
+cases/
+genx-logs-*/
+
+# Temporary and cache files
+.DS_Store
+.idea/
+.vscode/
+.ipynb_checkpoints/
+.ruff_cache/
+
+# Build artifacts
+YourModel.lp
+
+# Excel and data files (unless needed for builds)
+*.xlsx
+*.xlsb
+*.zip
+powergenome_costs_2024_atb.csv
+
+# Scripts not needed in container
+check_azure_setup.sh
+deploy_azure_infrastructure.sh
+monitor_deployment.sh
+setup_event_grid.sh
+test_*.sh
+github_secrets.txt
+test_azure_creds.json
+
+# Azure function (separate deployment)
+azure-function/
+
+# Development tools
+codecov.yml
+precompile/

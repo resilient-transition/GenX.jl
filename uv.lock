@@ -538,7 +538,6 @@ name = "genx-workflow"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "azure-storage-blob" },
     { name = "black", extra = ["jupyter"] },
     { name = "joblib" },
     { name = "jupyter" },
@@ -555,7 +554,6 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "azure-storage-blob", specifier = ">=12.19.0" },
     { name = "black", extras = ["jupyter"], specifier = ">=25.1.0" },
     { name = "joblib", specifier = ">=1.5.1" },
     { name = "jupyter", specifier = ">=1.1.1" },
