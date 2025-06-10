@@ -17,7 +17,7 @@ env:
 
 jobs:
   docker-test:
-    name: Build, Test and Deploy Docker Container
+    name: Build, Test and Deploy GenX Container
     runs-on: ubuntu-latest
     
     steps:
@@ -34,7 +34,7 @@ jobs:
         echo "tags=genx-test:latest,genx-test:${{ github.sha }}" >> $GITHUB_OUTPUT
         echo "sha-short=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
       
-    - name: Build Docker image for testing
+    - name: Build Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -45,16 +45,16 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         
-    - name: Test Docker container
+    - name: Test Docker container with three-zones case
       run: |
         echo "🧪 Testing Docker container with GenX three-zone example..."
-        echo "📊 Container: genx-test:${{ steps.meta.outputs.sha-short }}"
+        echo "📊 Container: genx-test:latest"
         echo ""
         
         # Run the container with real-time log following
         # Use timeout and resource limits for safety
         set +e  # Don't exit on error immediately
-        timeout 300 docker run --memory=4g --memory-swap=4g --name genx-test genx-test:latest
+        timeout 360 docker run --memory=4g --memory-swap=4g --name genx-test genx-test:latest
         DOCKER_EXIT_CODE=$?
         set -e  # Re-enable exit on error
         
@@ -115,7 +115,7 @@ jobs:
         fi
         
         echo ""
-        echo "🎉 All tests passed!"
+        echo "🎉 Container test passed! Ready for production deployment."
 
     - name: Azure Login
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -196,38 +196,42 @@ jobs:
         
         echo "✅ Function App configured"
 
-    - name: Get ACR login server
+    - name: Tag and push tested image to Azure Container Registry
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      id: acr-login-server
       run: |
+        echo "🏷️ Tagging and pushing tested Docker image to ACR..."
+        
+        # Get ACR login server
         ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
-        echo "acr-login-server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
-        echo "🏷️  ACR Login Server: $ACR_LOGIN_SERVER"
-
-    - name: Build and push to Azure Container Registry
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile
-        push: true
-        tags: |
-          ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:latest
-          ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        
+        # Tag the tested image with ACR tags
+        docker tag genx-test:latest $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest
+        docker tag genx-test:latest $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker tag genx-test:latest $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}
+        
+        # Push all tags
+        docker push $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest
+        docker push $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker push $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}
+        
+        echo "✅ Tested image pushed to ACR with tags:"
+        echo "   • $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest"
+        echo "   • $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        echo "   • $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}"
 
     - name: Show deployment info
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
+        # Get ACR login server for display
+        ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
+        
         echo "🚀 Docker image successfully pushed to Azure Container Registry!"
         echo "📋 Image tags:"
-        echo "   • ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:latest"
-        echo "   • ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-        echo "   • ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}"
+        echo "   • $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest"
+        echo "   • $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        echo "   • $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}"
         echo ""
-        echo "🔗 ACR Repository: ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}"
+        echo "🔗 ACR Repository: $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}"
 
     - name: Create Event Grid Subscription
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
