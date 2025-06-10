@@ -341,13 +341,33 @@ jobs:
         # Install Python dependencies
         cd azure-function
         if [ -f requirements.txt ]; then
+          echo "📦 Installing Python dependencies..."
           pip install -r requirements.txt
         fi
         
-        # Deploy the function code using Python 3.11
-        func azure functionapp publish ${{ env.FUNCTION_APP_NAME }} --python
+        # Validate function code before deployment
+        echo "🔍 Validating function code syntax..."
+        python -m py_compile function_app.py || (echo "❌ Function code has syntax errors" && exit 1)
         
-        echo "✅ Function App deployed"
+        # Deploy the function code using Python 3.11
+        echo "🚀 Publishing function to Azure..."
+        func azure functionapp publish ${{ env.FUNCTION_APP_NAME }} --python --verbose
+        
+        if [ $? -eq 0 ]; then
+          echo "✅ Function App deployed successfully"
+        else
+          echo "❌ Function App deployment failed"
+          exit 1
+        fi
+        
+        # Wait for deployment to propagate
+        echo "⏳ Waiting for deployment to propagate..."
+        sleep 15
+        
+        # Verify the function was deployed
+        echo "🔍 Verifying function deployment..."
+        cd ..
+        az functionapp function list --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "[].name" --output tsv || echo "Unable to list functions immediately after deployment"
 
     - name: Create Event Grid Subscription
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -364,8 +384,31 @@ jobs:
         echo "🔍 Validating function app exists: ${{ env.FUNCTION_APP_NAME }}"
         az functionapp show --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} || (echo "❌ Function app not found" && exit 1)
         
+        echo "🔍 Waiting for function deployment to complete..."
+        sleep 30
+        
+        echo "🔍 Listing all functions in the Function App for debugging:"
+        az functionapp function list --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "[].{name:name, status:status}" --output table || echo "Unable to list functions"
+        
         echo "🔍 Validating function exists: process_genx_case"
-        az functionapp function show --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --function-name process_genx_case || (echo "❌ Function 'process_genx_case' not found in Function App" && exit 1)
+        RETRY_COUNT=0
+        MAX_RETRIES=5
+        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+          if az functionapp function show --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --function-name process_genx_case; then
+            echo "✅ Function 'process_genx_case' found!"
+            break
+          else
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "⏳ Function not found, attempt $RETRY_COUNT/$MAX_RETRIES. Waiting 10 seconds..."
+            if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+              echo "❌ Function 'process_genx_case' not found after $MAX_RETRIES attempts"
+              echo "🔍 Function App logs for debugging:"
+              az functionapp log download --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} || echo "Unable to download logs"
+              exit 1
+            fi
+            sleep 10
+          fi
+        done
         
         # Remove any existing Event Grid subscription to avoid conflicts
         echo "🧹 Cleaning up existing Event Grid subscription..."
