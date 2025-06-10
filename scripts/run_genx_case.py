@@ -31,7 +31,7 @@ class GenXCaseRunner:
         
         # Container names
         self.input_container = os.environ.get('GENX_INPUT_CONTAINER', 'cases')
-        self.output_container = os.environ.get('GENX_OUTPUT_CONTAINER', 'results')
+        self.output_container = os.environ.get('GENX_OUTPUT_CONTAINER', 'solved')
         
         # Setup blob service client
         self.blob_service_client = self._setup_blob_client()
@@ -172,28 +172,28 @@ class GenXCaseRunner:
             return False
 
     def upload_results(self):
-        """Upload results back to blob storage."""
+        """Upload the entire solved case folder to blob storage."""
         if not self.blob_service_client:
             logger.error("Blob service client not available")
             return False
             
         try:
-            results_dir = Path(f"/app/cases/{self.case_name}/results")
+            case_dir = Path(f"/app/cases/{self.case_name}")
             
-            if not results_dir.exists():
-                logger.error(f"Results directory not found: {results_dir}")
+            if not case_dir.exists():
+                logger.error(f"Case directory not found: {case_dir}")
                 return False
             
-            logger.info(f"Uploading results for case: {self.case_name}")
+            logger.info(f"Uploading entire solved case folder for: {self.case_name}")
             
             uploaded_files = []
             
-            # Upload all files in results directory
-            for file_path in results_dir.rglob('*'):
+            # Upload all files in the entire case directory
+            for file_path in case_dir.rglob('*'):
                 if file_path.is_file():
-                    # Create blob name with case prefix
-                    relative_path = file_path.relative_to(results_dir)
-                    blob_name = f"{self.case_name}/results/{relative_path}"
+                    # Create blob name with case prefix, preserving folder structure
+                    relative_path = file_path.relative_to(case_dir)
+                    blob_name = f"{self.case_name}/{relative_path}"
                     blob_name = blob_name.replace('\\', '/')
                     
                     # Upload file
@@ -218,7 +218,7 @@ class GenXCaseRunner:
             }
             
             # Upload summary file
-            summary_blob_name = f"{self.case_name}/results/_summary.json"
+            summary_blob_name = f"{self.case_name}/_summary.json"
             summary_blob_client = self.blob_service_client.get_blob_client(
                 container=self.output_container,
                 blob=summary_blob_name

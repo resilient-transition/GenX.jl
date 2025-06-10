@@ -139,6 +139,8 @@ def create_genx_container(container_name: str, case_name: str, blob_path: str) -
             EnvironmentVariable(name="GENX_BLOB_PATH", value=blob_path),
             EnvironmentVariable(name="AZURE_STORAGE_ACCOUNT", value=storage_account),
             EnvironmentVariable(name="AZURE_STORAGE_KEY", value=os.environ.get('AZURE_STORAGE_KEY')),
+            EnvironmentVariable(name="GENX_INPUT_CONTAINER", value="cases"),
+            EnvironmentVariable(name="GENX_OUTPUT_CONTAINER", value="solved"),
             EnvironmentVariable(name="GENX_PRECOMPILE", value="false"),
             EnvironmentVariable(name="JULIA_NUM_THREADS", value="auto"),
         ]

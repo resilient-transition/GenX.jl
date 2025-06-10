@@ -151,7 +151,7 @@ jobs:
           --kind StorageV2 || true
         
         # Create blob containers for case inputs and results
-        for container in cases results logs; do
+        for container in cases solved logs; do
           az storage container create \
             --name $container \
             --account-name ${{ env.STORAGE_ACCOUNT }} \
@@ -283,7 +283,7 @@ jobs:
         echo ""
         echo "📦 Components:"
         echo "   • Storage Account: ${{ env.STORAGE_ACCOUNT }}"
-        echo "   • Containers: cases, results, logs"
+        echo "   • Containers: cases, solved, logs"
         echo "   • Function App: ${{ env.FUNCTION_APP_NAME }}"
         echo "   • Event Grid: genx-blob-events"
         echo "   • Container Registry: ${{ env.REGISTRY_NAME }}"
