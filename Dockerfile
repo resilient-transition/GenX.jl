@@ -55,6 +55,7 @@ RUN chmod +x startup.sh
 # Set environment variables
 ENV JULIA_PROJECT=/genx
 ENV JULIA_DEPOT_PATH=/usr/local/julia
+ENV GENX_PRECOMPILE=false
 
 # Create directories for input/output
 RUN mkdir -p /genx/case_input /genx/case_output
