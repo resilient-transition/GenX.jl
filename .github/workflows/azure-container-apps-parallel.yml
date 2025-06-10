@@ -315,7 +315,7 @@ jobs:
             --parallelism 1 \
             --replica-completion-count 1 \
             --replica-retry-limit 2 \
-            --replica-timeout 7200
+            --replica-timeout 600
 
           if [ $? -eq 0 ]; then
             echo "✅ Container App Job '$JOB_NAME' created successfully"
@@ -349,7 +349,7 @@ jobs:
           echo "Monitoring job: $JOB_NAME, execution: $EXECUTION_NAME"
           
           # Wait for job completion (timeout after 2 hours)
-          timeout=7200
+          timeout=600
           interval=30
           elapsed=0
           
