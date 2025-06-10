@@ -41,9 +41,8 @@ echo "   python scripts/azure_blob_utils.py list --account-name <storage-account
 echo ""
 
 echo -e "${BLUE}📚 Documentation:${NC}"
-echo "- DEPLOYMENT_GUIDE.md - Complete deployment instructions"
-echo "- FINAL_IMPLEMENTATION_SUMMARY.md - Project overview"
-echo "- IMPLEMENTATION_CHECKLIST.md - Validation checklist"
+echo "- AZURE_README.md - Complete deployment and operational guide"
+echo "- AZURE_QUICK_REFERENCE.md - Essential commands and quick access"
 echo ""
 
 echo -e "${GREEN}🎯 Your GenX Azure infrastructure is ready for production!${NC}"
