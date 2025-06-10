@@ -24,10 +24,73 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       
+    - name: Detect changes in core files
+      id: changes
+      run: |
+        echo "Detecting changes in core Julia and GenX files..."
+        
+        # Get the list of changed files
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          # For pull requests, compare against the target branch
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+        else
+          # For push events, compare against the previous commit
+          if [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }}..HEAD)
+          else
+            # If it's the first commit, consider all files as changed
+            CHANGED_FILES=$(git ls-files)
+          fi
+        fi
+        
+        echo "Changed files:"
+        echo "$CHANGED_FILES"
+        
+        # Define patterns for core files that require Docker rebuild
+        CORE_PATTERNS=(
+          "src/"
+          "Project.toml"
+          "Manifest.toml"
+          "pyproject.toml"
+          "scripts/run_genx_case.py"
+          "Dockerfile"
+          "Install.jl"
+          "Run.jl"
+          "example_systems/"
+        )
+        
+        # Check if any core files have changed
+        NEEDS_DOCKER_BUILD="false"
+        for pattern in "${CORE_PATTERNS[@]}"; do
+          if echo "$CHANGED_FILES" | grep -q "^$pattern"; then
+            echo "Core file pattern '$pattern' has changes"
+            NEEDS_DOCKER_BUILD="true"
+            break
+          fi
+        done
+        
+        echo "needs_docker_build=$NEEDS_DOCKER_BUILD" >> $GITHUB_OUTPUT
+        echo "🔍 Docker build needed: $NEEDS_DOCKER_BUILD"
+      
+    - name: Show optimization summary
+      run: |
+        if [ "${{ steps.changes.outputs.needs_docker_build }}" = "true" ]; then
+          echo "🔨 Building and testing Docker image (core files changed)"
+        else
+          echo "⚡ Skipping Docker build and test (no core file changes)"
+          echo "📦 Will use existing 'latest' image for deployments"
+        fi
+        
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "🚀 Manual workflow trigger - forcing full build"
+        fi
+      
     - name: Set up Docker Buildx
+      if: steps.changes.outputs.needs_docker_build == 'true' || github.event_name == 'workflow_dispatch'
       uses: docker/setup-buildx-action@v3
 
     - name: Generate image tags
+      if: steps.changes.outputs.needs_docker_build == 'true' || github.event_name == 'workflow_dispatch'
       id: meta
       run: |
         # Generate tags for the image
@@ -35,6 +98,7 @@ jobs:
         echo "sha-short=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
       
     - name: Build Docker image
+      if: steps.changes.outputs.needs_docker_build == 'true' || github.event_name == 'workflow_dispatch'
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -46,6 +110,7 @@ jobs:
         cache-to: type=gha,mode=max
         
     - name: Test Docker container with three-zones case
+      if: steps.changes.outputs.needs_docker_build == 'true' || github.event_name == 'workflow_dispatch'
       run: |
         echo "🧪 Testing Docker container with GenX three-zone example..."
         echo "📊 Container: genx-test:latest"
@@ -181,6 +246,16 @@ jobs:
         ACR_PASSWORD=$(az acr credential show --name ${{ env.REGISTRY_NAME }} --query passwords[0].value --output tsv)
         SUBSCRIPTION_ID=$(az account show --query id --output tsv)
         
+        # Determine which image tag to use
+        if [ "${{ steps.changes.outputs.needs_docker_build }}" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          IMAGE_TAG="${{ github.sha }}"
+          echo "🔄 Using new image tag: $IMAGE_TAG"
+        else
+          # Use the latest tag when no core changes occurred
+          IMAGE_TAG="latest"
+          echo "♻️  Using existing image tag: $IMAGE_TAG (no core file changes detected)"
+        fi
+        
         # Configure Function App settings
         az functionapp config appsettings set \
           --name ${{ env.FUNCTION_APP_NAME }} \
@@ -193,12 +268,12 @@ jobs:
             ACR_USERNAME=$ACR_USERNAME \
             ACR_PASSWORD=$ACR_PASSWORD \
             STORAGE_ACCOUNT_NAME=${{ env.STORAGE_ACCOUNT }} \
-            GENX_IMAGE_TAG=${{ github.sha }}
+            GENX_IMAGE_TAG=$IMAGE_TAG
         
         echo "✅ Function App configured"
 
     - name: Tag and push tested image to Azure Container Registry
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: (github.event_name == 'push' && github.ref == 'refs/heads/main') && (steps.changes.outputs.needs_docker_build == 'true' || github.event_name == 'workflow_dispatch')
       run: |
         echo "🏷️ Tagging and pushing tested Docker image to ACR..."
         
@@ -221,7 +296,7 @@ jobs:
         echo "   • $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}"
 
     - name: Show deployment info
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: (github.event_name == 'push' && github.ref == 'refs/heads/main') && (steps.changes.outputs.needs_docker_build == 'true' || github.event_name == 'workflow_dispatch')
       run: |
         # Get ACR login server for display
         ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
@@ -231,6 +306,18 @@ jobs:
         echo "   • $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest"
         echo "   • $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }}"
         echo "   • $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}"
+        echo ""
+        echo "🔗 ACR Repository: $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}"
+
+    - name: Show ACR skip info
+      if: (github.event_name == 'push' && github.ref == 'refs/heads/main') && (steps.changes.outputs.needs_docker_build == 'false' && github.event_name != 'workflow_dispatch')
+      run: |
+        # Get ACR login server for display
+        ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
+        
+        echo "⚡ Skipped Docker build and ACR push (no core file changes)"
+        echo "📦 Using existing image from ACR:"
+        echo "   • $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest"
         echo ""
         echo "🔗 ACR Repository: $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}"
 
