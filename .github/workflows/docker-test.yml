@@ -29,45 +29,24 @@ jobs:
       run: |
         echo "Detecting changes in core Julia and GenX files..."
         
-        # Get the list of changed files
+        # Simple approach: get changed files or default to all files if detection fails
         if [ "${{ github.event_name }}" = "pull_request" ]; then
-          # For pull requests, compare against the target branch
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null || git ls-files)
         else
-          # For push events, compare against the previous commit
-          if [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }}..HEAD)
-          else
-            # If it's the first commit, consider all files as changed
-            CHANGED_FILES=$(git ls-files)
-          fi
+          CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || git ls-files)
         fi
         
         echo "Changed files:"
         echo "$CHANGED_FILES"
         
-        # Define patterns for core files that require Docker rebuild
-        CORE_PATTERNS=(
-          "src/"
-          "Project.toml"
-          "Manifest.toml"
-          "pyproject.toml"
-          "scripts/run_genx_case.py"
-          "Dockerfile"
-          "Install.jl"
-          "Run.jl"
-          "example_systems/"
-        )
-        
-        # Check if any core files have changed
+        # Check if any .jl, .py, .toml files or Dockerfile have changed
         NEEDS_DOCKER_BUILD="false"
-        for pattern in "${CORE_PATTERNS[@]}"; do
-          if echo "$CHANGED_FILES" | grep -q "^$pattern"; then
-            echo "Core file pattern '$pattern' has changes"
-            NEEDS_DOCKER_BUILD="true"
-            break
-          fi
-        done
+        if echo "$CHANGED_FILES" | grep -E '\.(jl|py|toml)$|^Dockerfile$'; then
+          echo "Code files (.jl, .py, .toml) or Dockerfile changed - Docker build needed"
+          NEEDS_DOCKER_BUILD="true"
+        else
+          echo "No code files changed - skipping Docker build"
+        fi
         
         echo "needs_docker_build=$NEEDS_DOCKER_BUILD" >> $GITHUB_OUTPUT
         echo "🔍 Docker build needed: $NEEDS_DOCKER_BUILD"
