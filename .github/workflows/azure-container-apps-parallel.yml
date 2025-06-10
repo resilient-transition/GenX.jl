@@ -7,10 +7,12 @@ on:
       blob_container:
         description: 'Azure Blob Storage container name (e.g., genx-data)'
         required: true
+        default: 'genx-data'
         type: string
       case_names:
         description: 'Comma-separated list of case names to run (e.g., kentucky,texas,california)'
         required: true
+        default: '1_three_zones'
         type: string
       cpu_cores:
         description: 'CPU cores per job (0.25-2.0)'
@@ -25,7 +27,7 @@ on:
       max_parallel:
         description: 'Maximum parallel jobs'
         required: false
-        default: '5'
+        default: '4'
         type: string
       cleanup_level:
         description: 'Cleanup level: jobs-only, registries, or full'
@@ -41,12 +43,6 @@ on:
         required: false
         default: false
         type: boolean
-      cleanup_registry:
-        description: 'Delete Container Registry after run (true/false)'
-        required: false
-        default: 'true'
-        type: string
-
 env:
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
   AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
@@ -274,6 +270,26 @@ jobs:
             exit 1
           fi
           
+          # Validate resource specifications
+          CPU_CORES="${{ github.event.inputs.cpu_cores }}"
+          MEMORY_GB="${{ github.event.inputs.memory_gb }}"
+          
+          echo "📋 Resource allocation:"
+          echo "  CPU: ${CPU_CORES} cores"
+          echo "  Memory: ${MEMORY_GB}Gi"
+          
+          # Validate CPU range (Azure Container Apps supports 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, etc.)
+          if ! echo "$CPU_CORES" | grep -E '^[0-9]+(\.[0-9]+)?$' >/dev/null; then
+            echo "❌ Invalid CPU specification: $CPU_CORES"
+            exit 1
+          fi
+          
+          # Validate memory range
+          if ! echo "$MEMORY_GB" | grep -E '^[0-9]+(\.[0-9]+)?$' >/dev/null; then
+            echo "❌ Invalid memory specification: $MEMORY_GB"
+            exit 1
+          fi
+          
           # Get ACR credentials
           ACR_SERVER="${{ needs.setup-infrastructure.outputs.registry-name }}.azurecr.io"
           ACR_USERNAME=$(az acr credential show --name ${{ needs.setup-infrastructure.outputs.registry-name }} --query username -o tsv)
@@ -288,8 +304,9 @@ jobs:
             --registry-server "$ACR_SERVER" \
             --registry-username "$ACR_USERNAME" \
             --registry-password "$ACR_PASSWORD" \
-            --cpu ${{ github.event.inputs.cpu_cores }} \
-            --memory ${{ github.event.inputs.memory_gb }}Gi \
+            --trigger-type Manual \
+            --cpu "$CPU_CORES" \
+            --memory "${MEMORY_GB}Gi" \
             --env-vars \
               AZURE_STORAGE_ACCOUNT=${{ env.AZURE_STORAGE_ACCOUNT }} \
               AZURE_STORAGE_KEY=${{ env.AZURE_STORAGE_KEY }} \
@@ -300,10 +317,29 @@ jobs:
             --replica-retry-limit 2 \
             --replica-timeout 7200
 
+          if [ $? -eq 0 ]; then
+            echo "✅ Container App Job '$JOB_NAME' created successfully"
+          else
+            echo "❌ Failed to create Container App Job '$JOB_NAME'"
+            echo "Debug info:"
+            echo "  Environment: ${{ needs.setup-environment.outputs.environment-name }}"
+            echo "  Image: ${{ needs.build-image.outputs.image-name }}"
+            echo "  Registry: $ACR_SERVER"
+            exit 1
+          fi
+
           # Start the job
+          echo "🚀 Starting Container App Job execution..."
           EXECUTION_NAME=$(az containerapp job start --name "$JOB_NAME" --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query name -o tsv)
-          echo "execution-name=$EXECUTION_NAME" >> $GITHUB_OUTPUT
-          echo "job-name=$JOB_NAME" >> $GITHUB_OUTPUT
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Job execution started: $EXECUTION_NAME"
+            echo "execution-name=$EXECUTION_NAME" >> $GITHUB_OUTPUT
+            echo "job-name=$JOB_NAME" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Failed to start job execution"
+            exit 1
+          fi
 
       - name: Monitor job execution
         run: |
