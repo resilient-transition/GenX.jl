@@ -23,18 +23,15 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
+      with:
+        fetch-depth: 2  # Fetch current and previous commit
     - name: Detect changes in core files
       id: changes
       run: |
         echo "Detecting changes in core Julia and GenX files..."
         
         # Simple approach: get changed files or default to all files if detection fails
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null || git ls-files)
-        else
-          CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || git ls-files)
-        fi
+        CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || git ls-files)
         
         echo "Changed files:"
         echo "$CHANGED_FILES"
