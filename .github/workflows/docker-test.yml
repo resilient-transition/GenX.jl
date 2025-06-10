@@ -54,7 +54,7 @@ jobs:
         # Run the container with real-time log following
         # Use timeout and resource limits for safety
         set +e  # Don't exit on error immediately
-        timeout 600 docker run --memory=4g --memory-swap=4g --name genx-test genx-test:latest
+        timeout 360 docker run --memory=4g --memory-swap=4g --name genx-test genx-test:latest
         DOCKER_EXIT_CODE=$?
         set -e  # Re-enable exit on error
         
@@ -84,7 +84,7 @@ jobs:
         CONTAINER_LOGS=$(docker logs genx-test 2>&1)
         
         # Check for successful completion
-        if echo "$CONTAINER_LOGS" | grep -q "Wrote outputs to"; then
+        if echo "$CONTAINER_LOGS" | grep -q "Model status        : Optimal"; then
           echo "✅ GenX optimization completed successfully"
         else
           echo "❌ GenX optimization did not complete"
