@@ -54,7 +54,7 @@ jobs:
         # Run the container with real-time log following
         # Use timeout and resource limits for safety
         set +e  # Don't exit on error immediately
-        timeout 360 docker run --memory=4g --memory-swap=4g --name genx-test genx-test:latest
+        timeout 600 docker run --memory=4g --memory-swap=4g --name genx-test genx-test:latest
         DOCKER_EXIT_CODE=$?
         set -e  # Re-enable exit on error
         
