@@ -40,4 +40,9 @@ test/Logs
 test/TDR/TDR_results_test
 !test/TDR/TDR_results_true
 
-.idea/**__pycache__/
+.idea/
+.ipynb_checkpoints/
+*.xls*
+**/__pycache__/
+cases/
+*.csv
