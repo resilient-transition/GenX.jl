@@ -265,11 +265,27 @@ jobs:
       run: |
         echo "🚀 Deploying Function App code..."
         
+        # Set up Python 3.11 for Azure Functions deployment
+        sudo apt-get update
+        sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
+        
+        # Create a Python 3.11 virtual environment
+        python3.11 -m venv venv311
+        source venv311/bin/activate
+        
+        # Verify Python version
+        echo "Using Python version: $(python --version)"
+        
         # Install Azure Functions Core Tools
         npm install -g azure-functions-core-tools@4 --unsafe-perm true
         
-        # Deploy the function code
+        # Install Python dependencies in the virtual environment
         cd azure-function
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        fi
+        
+        # Deploy the function code using Python 3.11
         func azure functionapp publish ${{ env.FUNCTION_APP_NAME }} --python
         
         echo "✅ Function App deployed"
