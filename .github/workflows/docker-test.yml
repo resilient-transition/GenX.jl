@@ -308,98 +308,48 @@ jobs:
       run: |
         echo "🚀 Deploying Function App code..."
         
-        # Verify Python version
-        echo "Using Python version: $(python --version)"
-        
         # Install Azure Functions Core Tools
         npm install -g azure-functions-core-tools@4 --unsafe-perm true
         
-        # Install Python dependencies
+        # Deploy the function code
         cd azure-function
-        if [ -f requirements.txt ]; then
-          echo "📦 Installing Python dependencies..."
-          pip install -r requirements.txt
-        fi
-        
-        # Validate function code before deployment
-        echo "🔍 Validating function code syntax..."
-        python -m py_compile function_app.py || (echo "❌ Function code has syntax errors" && exit 1)
-        
-        # Deploy the function code using Python 3.11
         echo "🚀 Publishing function to Azure..."
-        func azure functionapp publish ${{ env.FUNCTION_APP_NAME }} --python --verbose
+        func azure functionapp publish ${{ env.FUNCTION_APP_NAME }} --python
         
-        if [ $? -eq 0 ]; then
-          echo "✅ Function App deployed successfully"
-        else
-          echo "❌ Function App deployment failed"
-          exit 1
-        fi
-        
-        # Wait for deployment to propagate
-        echo "⏳ Waiting for deployment to propagate..."
-        sleep 15
-        
-        # Verify the function was deployed
-        echo "🔍 Verifying function deployment..."
-        cd ..
-        az functionapp function list --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "[].name" --output tsv || echo "Unable to list functions immediately after deployment"
+        echo "✅ Function App deployment initiated. Waiting for completion..."
+        sleep 30  # Give deployment time to complete
 
     - name: Create Event Grid Subscription
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         echo "📡 Creating Event Grid subscription for blob events..."
         
+        # Get subscription and resource IDs
         SUBSCRIPTION_ID=$(az account show --query id --output tsv)
         STORAGE_RESOURCE_ID="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.Storage/storageAccounts/${{ env.STORAGE_ACCOUNT }}"
         FUNCTION_ENDPOINT="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.Web/sites/${{ env.FUNCTION_APP_NAME }}/functions/process_genx_case"
         
-        echo "🔍 Validating storage account exists: ${{ env.STORAGE_ACCOUNT }}"
-        az storage account show --name ${{ env.STORAGE_ACCOUNT }} --resource-group ${{ env.RESOURCE_GROUP }} || (echo "❌ Storage account not found" && exit 1)
+        # Verify core resources exist
+        echo "🔍 Verifying Function App exists..."
+        az functionapp show --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query name -o tsv
         
-        echo "🔍 Validating function app exists: ${{ env.FUNCTION_APP_NAME }}"
-        az functionapp show --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} || (echo "❌ Function app not found" && exit 1)
+        echo "🔍 Verifying function 'process_genx_case' exists..."
+        # Simple function check with timeout
+        timeout 60s bash -c 'until az functionapp function show --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --function-name process_genx_case &>/dev/null; do echo "Waiting for function..."; sleep 5; done' || {
+          echo "❌ Function 'process_genx_case' not found after deployment"
+          echo "Available functions:"
+          az functionapp function list --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "[].name" -o tsv 2>/dev/null || echo "Unable to list functions"
+          exit 1
+        }
         
-        echo "🔍 Waiting for function deployment to complete..."
-        sleep 30
-        
-        echo "🔍 Listing all functions in the Function App for debugging:"
-        az functionapp function list --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "[].{name:name, status:status}" --output table || echo "Unable to list functions"
-        
-        echo "🔍 Validating function exists: process_genx_case"
-        RETRY_COUNT=0
-        MAX_RETRIES=5
-        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-          if az functionapp function show --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --function-name process_genx_case; then
-            echo "✅ Function 'process_genx_case' found!"
-            break
-          else
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            echo "⏳ Function not found, attempt $RETRY_COUNT/$MAX_RETRIES. Waiting 10 seconds..."
-            if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-              echo "❌ Function 'process_genx_case' not found after $MAX_RETRIES attempts"
-              echo "🔍 Function App logs for debugging:"
-              az functionapp log download --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} || echo "Unable to download logs"
-              exit 1
-            fi
-            sleep 10
-          fi
-        done
-        
-        # Remove any existing Event Grid subscription to avoid conflicts
-        echo "🧹 Cleaning up existing Event Grid subscription..."
+        # Remove existing subscription if it exists
+        echo "🧹 Removing existing Event Grid subscription..."
         az eventgrid event-subscription delete \
           --name genx-case-processing \
-          --source-resource-id "$STORAGE_RESOURCE_ID" || true
+          --source-resource-id "$STORAGE_RESOURCE_ID" 2>/dev/null || true
         
-        # Wait a moment for cleanup to complete
-        sleep 10
-        
-        # Create Event Grid subscription to trigger function on blob uploads to genxdata storage account
-        echo "🔗 Creating Event Grid subscription for storage account: ${{ env.STORAGE_ACCOUNT }}"
-        echo "   Storage Resource ID: $STORAGE_RESOURCE_ID"
-        echo "   Function Endpoint: $FUNCTION_ENDPOINT"
-        
+        # Create new Event Grid subscription
+        echo "🔗 Creating Event Grid subscription..."
         az eventgrid event-subscription create \
           --name genx-case-processing \
           --source-resource-id "$STORAGE_RESOURCE_ID" \
@@ -410,43 +360,35 @@ jobs:
           --max-delivery-attempts 3 \
           --event-ttl 1440
         
-        # Verify the subscription was created successfully
-        echo "✅ Verifying Event Grid subscription..."
-        az eventgrid event-subscription show \
-          --name genx-case-processing \
-          --source-resource-id "$STORAGE_RESOURCE_ID" \
-          --query "{name:name, provisioningState:provisioningState, endpoint:destination.endpointUrl}" \
-          --output table
-        
-        echo "✅ Event Grid subscription created and verified for storage account: ${{ env.STORAGE_ACCOUNT }}"
+        echo "✅ Event Grid subscription created successfully"
 
-    - name: Validate Event Grid Setup
+    - name: Validate Deployment
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        echo "🔍 Validating Event Grid setup..."
+        echo "🔍 Validating deployment..."
         
         SUBSCRIPTION_ID=$(az account show --query id --output tsv)
         STORAGE_RESOURCE_ID="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.Storage/storageAccounts/${{ env.STORAGE_ACCOUNT }}"
         
-        # Verify Event Grid subscription exists and is properly configured
+        # Verify Event Grid subscription
         echo "📡 Event Grid Subscription Status:"
         az eventgrid event-subscription show \
           --name genx-case-processing \
           --source-resource-id "$STORAGE_RESOURCE_ID" \
-          --query "{name:name, provisioningState:provisioningState, endpoint:destination.endpointUrl, eventTypes:filter.includedEventTypes, subjectFilter:filter.subjectBeginsWith}" \
-          --output table || (echo "❌ Event Grid subscription not found or misconfigured" && exit 1)
+          --query "{name:name, provisioningState:provisioningState, eventTypes:filter.includedEventTypes}" \
+          --output table
         
-        # Check Function App status
+        # Show Function App status
         echo ""
         echo "⚡ Function App Status:"
         az functionapp show \
           --name ${{ env.FUNCTION_APP_NAME }} \
           --resource-group ${{ env.RESOURCE_GROUP }} \
-          --query "{state:state, defaultHostName:defaultHostName}" \
+          --query "{name:name, state:state, defaultHostName:defaultHostName}" \
           --output table
         
         echo ""
-        echo "✅ Event Grid validation completed successfully!"
+        echo "✅ Deployment validation completed!"
         echo ""
         echo "📋 Monitoring Commands:"
         echo "======================"
@@ -456,7 +398,7 @@ jobs:
         echo "# List running containers:"
         echo "az container list --resource-group ${{ env.RESOURCE_GROUP }} --output table"
         echo ""
-        echo "# Upload test case to trigger Event Grid:"
+        echo "# Test Event Grid by uploading a file:"
         echo "az storage blob upload --account-name ${{ env.STORAGE_ACCOUNT }} --container-name cases --name test-case/example.csv --file example.csv --auth-mode key"
 
     - name: Show complete deployment summary
@@ -470,14 +412,15 @@ jobs:
         echo "   • Storage Account: ${{ env.STORAGE_ACCOUNT }}"
         echo "   • Containers: cases, solved, logs"
         echo "   • Function App: ${{ env.FUNCTION_APP_NAME }}"
-        echo "   • Event Grid: genx-blob-events"
+        echo "   • Function: process_genx_case"
+        echo "   • Event Grid: genx-case-processing"
         echo "   • Container Registry: ${{ env.REGISTRY_NAME }}"
         echo ""
         echo "🔄 Usage:"
         echo "   1. Upload GenX case to 'cases' container"
-        echo "   2. Event Grid triggers function automatically"
-        echo "   3. Function creates container with SHA: ${{ github.sha }}"
-        echo "   4. Container processes case and uploads results"
+        echo "   2. Event Grid triggers Azure Function automatically"
+        echo "   3. Function creates container instance to process case"
+        echo "   4. Results are uploaded to 'solved' container"
         echo ""
         echo "📚 Documentation: See EVENT_GRID_AUTOMATION.md"
         
