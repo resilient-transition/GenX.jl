@@ -1,0 +1,4 @@
+Resource,Zone,Fuel,Var_OM_Cost_per_MWh,Start_Cost_per_MW,Cap_Size,Existing_Cap_MW,Max_Cap_MW,Min_Cap_MW,Inv_Cost_per_MWyr,Fixed_OM_Cost_per_MWyr,Heat_Rate_MMBTU_per_MWh,WACC,Capital_Recovery_Period,Lifetime
+Gas_1,1,Natural_Gas,50,100,100,500,1000,0,100000,10000,7.5,0.07,20,30
+Gas_2,2,Natural_Gas,55,100,100,400,800,0,100000,10000,7.5,0.07,20,30
+Gas_3,3,Natural_Gas,60,100,100,300,600,0,100000,10000,7.5,0.07,20,30

@@ -1,0 +1,187 @@
+name: Build and Deploy GenX Event Grid Container
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Dockerfile.eventgrid'
+      - 'scripts/run_genx_case.py'
+      - 'azure-function/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Dockerfile.eventgrid'
+      - 'scripts/run_genx_case.py'
+      - 'azure-function/**'
+  workflow_dispatch:
+
+env:
+  REGISTRY_NAME: genxjlregistry
+  IMAGE_NAME: genx-eventgrid
+  RESOURCE_GROUP: genx-rg
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy Event Grid Container
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Generate image metadata
+      id: meta
+      run: |
+        echo "tags=genx-eventgrid:latest,genx-eventgrid:${{ github.sha }}" >> $GITHUB_OUTPUT
+        echo "sha-short=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
+        echo "build-date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+      
+    - name: Build Docker image for testing
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.eventgrid
+        platforms: linux/amd64
+        push: false
+        load: true
+        tags: ${{ steps.meta.outputs.tags }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Test Docker container
+      run: |
+        echo "🧪 Testing Event Grid container..."
+        echo "📊 Container: genx-eventgrid:${{ steps.meta.outputs.sha-short }}"
+        echo ""
+        
+        # Test container startup and basic functionality
+        set +e  # Don't exit on error immediately
+        timeout 60 docker run --name genx-eventgrid-test genx-eventgrid:latest &
+        CONTAINER_PID=$!
+        sleep 10  # Give container time to start
+        
+        # Check if container is running
+        if docker ps | grep -q genx-eventgrid-test; then
+            echo "✅ Container started successfully"
+            docker stop genx-eventgrid-test
+            DOCKER_EXIT_CODE=0
+        else
+            echo "❌ Container failed to start"
+            DOCKER_EXIT_CODE=1
+        fi
+        
+        # Clean up
+        docker rm genx-eventgrid-test || true
+        set -e  # Re-enable exit on error
+        
+        if [ $DOCKER_EXIT_CODE -ne 0 ]; then
+            echo "Container logs:"
+            docker logs genx-eventgrid-test || true
+            exit 1
+        fi
+        
+        echo "🎉 Container test passed!"
+
+    - name: Azure Login
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to Azure Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "🔐 Logging into Azure Container Registry..."
+        # Ensure ACR exists (create if it doesn't)
+        az acr create \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --name ${{ env.REGISTRY_NAME }} \
+          --sku Basic \
+          --admin-enabled true || true
+        
+        # Login to ACR
+        az acr login --name ${{ env.REGISTRY_NAME }}
+
+    - name: Get ACR login server
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      id: acr-login-server
+      run: |
+        ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
+        echo "acr-login-server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+        echo "🏷️  ACR Login Server: $ACR_LOGIN_SERVER"
+
+    - name: Build and push to Azure Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.eventgrid
+        platforms: linux/amd64
+        push: true
+        tags: |
+          ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:latest
+          ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        labels: |
+          org.opencontainers.image.title=GenX Event Grid Container
+          org.opencontainers.image.description=GenX container optimized for Azure Event Grid processing
+          org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.created=${{ steps.meta.outputs.build-date }}
+
+    - name: Deploy Azure Function (if changed)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        # Check if Azure Function files have changed
+        if git diff --name-only HEAD~1 HEAD | grep -q "azure-function/"; then
+          echo "🔄 Azure Function files changed, deploying..."
+          
+          # Install Azure Functions Core Tools
+          npm install -g azure-functions-core-tools@4 --unsafe-perm true
+          
+          # Deploy function
+          cd azure-function
+          func azure functionapp publish genx-eventgrid-function --python
+          
+          echo "✅ Azure Function deployed"
+        else
+          echo "ℹ️  No Azure Function changes detected, skipping deployment"
+        fi
+
+    - name: Show deployment info
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "🚀 GenX Event Grid container successfully deployed!"
+        echo ""
+        echo "📋 Image tags pushed to ACR:"
+        echo "   • ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:latest"
+        echo "   • ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        echo "   • ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.sha-short }}"
+        echo ""
+        echo "🔗 Resources:"
+        echo "   • ACR Repository: ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}"
+        echo "   • Function App: https://genx-eventgrid-function.azurewebsites.net"
+        echo "   • Function Status: https://genx-eventgrid-function.azurewebsites.net/api/status"
+        echo ""
+        echo "📁 Next steps:"
+        echo "   1. Run: ./scripts/setup_event_grid.sh (if not already done)"
+        echo "   2. Test: ./scripts/monitor_deployment.sh test"
+        echo "   3. Monitor: ./scripts/monitor_deployment.sh logs"
+        
+    - name: Show container logs on failure
+      if: failure()
+      run: |
+        echo "📋 Container logs:"
+        echo "=================="
+        docker logs genx-eventgrid-test || echo "No container logs available"
+        
+    - name: Cleanup
+      if: always()
+      run: |
+        # Remove test container
+        docker rm genx-eventgrid-test || true

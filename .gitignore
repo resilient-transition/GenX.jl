@@ -40,4 +40,4 @@ test/Logs
 test/TDR/TDR_results_test
 !test/TDR/TDR_results_true
 
-.idea/**
+.idea/**__pycache__/

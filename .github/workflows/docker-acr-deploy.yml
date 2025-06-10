@@ -1,0 +1,144 @@
+name: Build and Deploy GenX to Azure
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY_NAME: genxjlregistry
+  IMAGE_NAME: genx-jl
+  RESOURCE_GROUP: genx-rg
+  LOCATION: eastus
+  STORAGE_ACCOUNT: genxstorage
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Create Azure Infrastructure
+      run: |
+        echo "🏗️ Creating Azure infrastructure..."
+        
+        # Create resource group
+        echo "Creating resource group..."
+        az group create \
+          --name ${{ env.RESOURCE_GROUP }} \
+          --location ${{ env.LOCATION }}
+        
+        # Create storage account
+        echo "Creating storage account..."
+        az storage account create \
+          --name ${{ env.STORAGE_ACCOUNT }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --location ${{ env.LOCATION }} \
+          --sku Standard_LRS \
+          --kind StorageV2
+        
+        # Create container for case inputs (results will go in the same container)
+        echo "Creating blob container..."
+        az storage container create \
+          --name case-inputs \
+          --account-name ${{ env.STORAGE_ACCOUNT }} \
+          --auth-mode login
+        
+        # Create Azure Container Registry
+        echo "Creating Azure Container Registry..."
+        az acr create \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --name ${{ env.REGISTRY_NAME }} \
+          --sku Basic \
+          --admin-enabled true
+
+    - name: Login to Azure Container Registry
+      run: |
+        az acr login --name ${{ env.REGISTRY_NAME }}
+
+    - name: Get ACR login server
+      id: acr-login-server
+      run: |
+        ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
+        echo "acr-login-server=$ACR_LOGIN_SERVER" >> $GITHUB_OUTPUT
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: |
+          ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:latest
+          ${{ steps.acr-login-server.outputs.acr-login-server }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Create Function App Infrastructure
+      run: |
+        echo "⚡ Creating Function App..."
+        
+        # Create Function App with consumption plan
+        az functionapp create \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --consumption-plan-location ${{ env.LOCATION }} \
+          --runtime python \
+          --runtime-version 3.12 \
+          --functions-version 4 \
+          --name genx-function-app \
+          --storage-account ${{ env.STORAGE_ACCOUNT }}
+        
+        # Get ACR credentials for Function App settings
+        ACR_USERNAME=$(az acr credential show --name ${{ env.REGISTRY_NAME }} --query username --output tsv)
+        ACR_PASSWORD=$(az acr credential show --name ${{ env.REGISTRY_NAME }} --query passwords[0].value --output tsv)
+        SUBSCRIPTION_ID=$(az account show --query id --output tsv)
+        
+        # Configure Function App settings
+        az functionapp config appsettings set \
+          --name genx-function-app \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --settings \
+            AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID \
+            AZURE_RESOURCE_GROUP=${{ env.RESOURCE_GROUP }} \
+            AZURE_LOCATION=${{ env.LOCATION }} \
+            ACR_REGISTRY_NAME=${{ env.REGISTRY_NAME }} \
+            ACR_USERNAME=$ACR_USERNAME \
+            ACR_PASSWORD=$ACR_PASSWORD \
+            STORAGE_ACCOUNT_NAME=${{ env.STORAGE_ACCOUNT }}
+
+    - name: Setup Event Grid
+      run: |
+        echo "🔔 Setting up Event Grid..."
+        
+        # Create Event Grid topic
+        az eventgrid topic create \
+          --name genx-blob-events \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --location ${{ env.LOCATION }}
+
+    - name: Output Configuration
+      run: |
+        ACR_LOGIN_SERVER=$(az acr show --name ${{ env.REGISTRY_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query loginServer --output tsv)
+        
+        echo "🎉 Infrastructure deployment completed!"
+        echo ""
+        echo "📋 Configuration Summary:"
+        echo "========================"
+        echo "Docker Image: $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}:latest"
+        echo "Storage Account: ${{ env.STORAGE_ACCOUNT }}"
+        echo "Container: case-inputs"
+        echo "Resource Group: ${{ env.RESOURCE_GROUP }}"
+        echo "Function App: genx-function-app"
+        echo ""
+        echo "📁 Upload case files to trigger processing:"
+        echo "az storage blob upload-batch --destination case-inputs --source example_systems/1_three_zones --account-name ${{ env.STORAGE_ACCOUNT }} --auth-mode login"
