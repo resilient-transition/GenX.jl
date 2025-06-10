@@ -17,7 +17,7 @@ import time
 app = func.FunctionApp()
 
 @app.event_grid_trigger(arg_name="azeventgrid")
-def blob_trigger(azeventgrid: func.EventGridEvent):
+def process_genx_case(azeventgrid: func.EventGridEvent):
     """
     Azure Function triggered by Event Grid when blobs are uploaded to storage.
     Processes GenX case uploads and triggers container processing.
