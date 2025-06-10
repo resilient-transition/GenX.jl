@@ -170,7 +170,7 @@ jobs:
           --resource-group ${{ env.RESOURCE_GROUP }} \
           --consumption-plan-location ${{ env.LOCATION }} \
           --runtime python \
-          --runtime-version 3.12 \
+          --runtime-version 3.11 \
           --functions-version 4 \
           --name ${{ env.FUNCTION_APP_NAME }} \
           --storage-account ${{ env.STORAGE_ACCOUNT }} \
