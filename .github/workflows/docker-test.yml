@@ -11,7 +11,7 @@ env:
   REGISTRY_NAME: genxjlregistry
   IMAGE_NAME: genx-jl
   RESOURCE_GROUP: genx-rg
-  STORAGE_ACCOUNT: genxstorage
+  STORAGE_ACCOUNT: genxdata
   LOCATION: eastus
   FUNCTION_APP_NAME: genx-function-app
 

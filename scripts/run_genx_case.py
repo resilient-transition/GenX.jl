@@ -25,7 +25,7 @@ class GenXCaseRunner:
     def __init__(self):
         self.case_name = os.environ.get('GENX_CASE_NAME')
         self.blob_path = os.environ.get('GENX_BLOB_PATH')
-        self.storage_account = os.environ.get('AZURE_STORAGE_ACCOUNT', 'genxstorage')
+        self.storage_account = os.environ.get('AZURE_STORAGE_ACCOUNT', 'genxdata')
         self.storage_key = os.environ.get('AZURE_STORAGE_KEY')
         self.storage_connection_string = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
         

@@ -7,7 +7,7 @@ set -e
 
 # Configuration
 RESOURCE_GROUP="genx-rg"
-STORAGE_ACCOUNT="genxstorage"
+STORAGE_ACCOUNT="genxdata"
 FUNCTION_APP_NAME="genx-eventgrid-function"
 EVENT_SUBSCRIPTION_NAME="genx-blob-trigger"
 

@@ -122,7 +122,7 @@ def create_genx_container(container_name: str, case_name: str, blob_path: str) -
         subscription_id = os.environ['AZURE_SUBSCRIPTION_ID']
         resource_group = os.environ.get('AZURE_RESOURCE_GROUP', 'genx-rg')
         registry_name = os.environ.get('AZURE_REGISTRY_NAME', 'genxjlregistry')
-        storage_account = os.environ.get('AZURE_STORAGE_ACCOUNT', 'genxstorage')
+        storage_account = os.environ.get('AZURE_STORAGE_ACCOUNT', 'genxdata')
         
         # Initialize Azure clients
         credential = DefaultAzureCredential()
