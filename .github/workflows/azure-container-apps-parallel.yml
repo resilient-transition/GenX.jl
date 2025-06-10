@@ -216,12 +216,24 @@ jobs:
           echo "💾 Storage saved: ~500MB-1GB (no duplicate layers)"
           echo "🎯 Using cached image: ${{ steps.setup-vars.outputs.image }}"
 
-      - name: Create Container App Environment
+      - name: Create Container App Environment if not found
+        id: create-env
         run: |
-          az containerapp env create \
-            --name ${{ env.CONTAINER_APP_ENV }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --location ${{ env.AZURE_LOCATION }}
+          echo "🔍 Checking Container App Environment ${{ env.CONTAINER_APP_ENV }}"
+          if az containerapp env show --name ${{ env.CONTAINER_APP_ENV }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} &>/dev/null; then
+            echo "✅ Container App Environment ${{ env.CONTAINER_APP_ENV }} exists and ready"
+            echo "ready=true" >> $GITHUB_OUTPUT
+            echo "name=${{ env.CONTAINER_APP_ENV }}" >> $GITHUB_OUTPUT
+          else
+            echo "🏗️ Creating Container App Environment ${{ env.CONTAINER_APP_ENV }} in eastus"
+            az containerapp env create \
+              --name ${{ env.CONTAINER_APP_ENV }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --location ${{ env.AZURE_LOCATION }}
+            echo "✅ Container App Environment created successfully"
+            echo "ready=true" >> $GITHUB_OUTPUT
+            echo "name=${{ env.CONTAINER_APP_ENV }}" >> $GITHUB_OUTPUT
+          fi
 
   run-parallel-jobs:
     needs: [setup-infrastructure, setup-environment, setup-matrix, build-image]
