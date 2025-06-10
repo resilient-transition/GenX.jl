@@ -173,7 +173,8 @@ jobs:
           --runtime-version 3.12 \
           --functions-version 4 \
           --name ${{ env.FUNCTION_APP_NAME }} \
-          --storage-account ${{ env.STORAGE_ACCOUNT }} || true
+          --storage-account ${{ env.STORAGE_ACCOUNT }} \
+          --os-type Linux || true
         
         # Get credentials for Function App configuration
         ACR_USERNAME=$(az acr credential show --name ${{ env.REGISTRY_NAME }} --query username --output tsv)
