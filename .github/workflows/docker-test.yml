@@ -33,14 +33,25 @@ jobs:
       run: |
         echo "🧪 Testing Docker container with GenX three-zone example..."
         
-        # Run the container and capture output
-        docker run --name genx-test genx-test:latest > docker_output.log 2>&1
+        # Run the container and capture output and exit code
+        set +e  # Don't exit on error
+        timeout 300 docker run --memory=4g --memory-swap=4g --name genx-test genx-test:latest > docker_output.log 2>&1
+        DOCKER_EXIT_CODE=$?
+        set -e  # Re-enable exit on error
+        
+        # Show container logs for debugging
+        echo "📋 Container output:"
+        echo "==================="
+        cat docker_output.log || echo "No output file found"
         
         # Check if the container ran successfully
-        if [ $? -eq 0 ]; then
+        if [ $DOCKER_EXIT_CODE -eq 0 ]; then
           echo "✅ Container executed successfully"
+        elif [ $DOCKER_EXIT_CODE -eq 124 ]; then
+          echo "❌ Container execution timed out (5 minutes)"
+          exit 1
         else
-          echo "❌ Container execution failed"
+          echo "❌ Container execution failed with exit code $DOCKER_EXIT_CODE"
           exit 1
         fi
         
