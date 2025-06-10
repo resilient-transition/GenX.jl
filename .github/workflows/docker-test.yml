@@ -234,6 +234,34 @@ jobs:
         echo ""
         echo "🔗 ACR Repository: $ACR_LOGIN_SERVER/${{ env.IMAGE_NAME }}"
 
+    - name: Setup Python 3.11 for Function Deployment
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Deploy Function App Code
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "🚀 Deploying Function App code..."
+        
+        # Verify Python version
+        echo "Using Python version: $(python --version)"
+        
+        # Install Azure Functions Core Tools
+        npm install -g azure-functions-core-tools@4 --unsafe-perm true
+        
+        # Install Python dependencies
+        cd azure-function
+        if [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        fi
+        
+        # Deploy the function code using Python 3.11
+        func azure functionapp publish ${{ env.FUNCTION_APP_NAME }} --python
+        
+        echo "✅ Function App deployed"
+
     - name: Create Event Grid Subscription
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
@@ -248,6 +276,9 @@ jobs:
         
         echo "🔍 Validating function app exists: ${{ env.FUNCTION_APP_NAME }}"
         az functionapp show --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} || (echo "❌ Function app not found" && exit 1)
+        
+        echo "🔍 Validating function exists: process_genx_case"
+        az functionapp function show --name ${{ env.FUNCTION_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --function-name process_genx_case || (echo "❌ Function 'process_genx_case' not found in Function App" && exit 1)
         
         # Remove any existing Event Grid subscription to avoid conflicts
         echo "🧹 Cleaning up existing Event Grid subscription..."
@@ -282,40 +313,6 @@ jobs:
           --output table
         
         echo "✅ Event Grid subscription created and verified for storage account: ${{ env.STORAGE_ACCOUNT }}"
-
-    - name: Set up Python 3.11
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
-    - name: Setup Python 3.11 for Function Deployment
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
-    - name: Deploy Function App Code
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
-        echo "🚀 Deploying Function App code..."
-        
-        # Verify Python version
-        echo "Using Python version: $(python --version)"
-        
-        # Install Azure Functions Core Tools
-        npm install -g azure-functions-core-tools@4 --unsafe-perm true
-        
-        # Install Python dependencies
-        cd azure-function
-        if [ -f requirements.txt ]; then
-          pip install -r requirements.txt
-        fi
-        
-        # Deploy the function code using Python 3.11
-        func azure functionapp publish ${{ env.FUNCTION_APP_NAME }} --python
-        
-        echo "✅ Function App deployed"
 
     - name: Validate Event Grid Setup
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
