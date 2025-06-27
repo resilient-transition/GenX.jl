@@ -1,0 +1,7 @@
+/* Load Inter from Google Fonts */
+@import url(https://fonts.bunny.net/css?family=ibm-plex-sans:400,400i,700,700i|jetbrains-mono:400,400i,700,700i|unbounded:400);
+:root {
+    --marimo-heading-font: 'IBM Plex Sans', sans-serif;
+    --marimo-body-font: 'IBM Plex Sans', sans-serif;
+    --margimo-monospace-font: 'JetBrains Mono', monospace;
+}

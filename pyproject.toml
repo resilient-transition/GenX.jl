@@ -15,6 +15,7 @@ dependencies = [
     "joblib>=1.5.1",
     "jupyter>=1.1.1",
     "loguru>=0.7.3",
+    "marimo>=0.14.0",
     "matplotlib>=3.10.3",
     "nbstripout>=0.8.1",
     "pandas>=2.2.3",
@@ -23,6 +24,16 @@ dependencies = [
     "pytest>=8.4.0",
     "pytest-mock>=3.14.1",
     "requests>=2.32.3",
+    "streamlit>=1.45.1",
     "universal-pathlib>=0.2.6",
     "xlwings>=0.33.14",
 ]
+
+[tool.marimo.runtime]
+pythonpath = ["src"]
+
+[tool.marimo.display]
+custom_css = ["resilient-transition.css"]
+
+[tool.marimo.server]
+browser = "chrome"
