@@ -8,7 +8,7 @@ function write_reserve_margin(path::AbstractString, setup::Dict, EP::AbstractMod
     return nothing
 end
 
-function write_reserve_margin_ELCC(path::AbstractString, setup::Dict, EP::Model)
+function write_reserve_margin_ELCC(path::AbstractString, setup::Dict, EP::AbstractModel)
     PRM_dual = dual.(EP[:cCapacityResMarginELCC])
     PRM_LHS = value.(EP[:cCapacityResMarginELCC])
     dfPRM = DataFrame(
@@ -20,11 +20,11 @@ function write_reserve_margin_ELCC(path::AbstractString, setup::Dict, EP::Model)
 end
 
 @doc raw"""
-	write_NQC(path::AbstractString, inputs::Dict, setup::Dict, EP::Model))
+	write_NQC(path::AbstractString, inputs::Dict, setup::Dict, EP::AbstractModel))
 
 Function for writing reliability capacity and NQC when using the ELCC/PRM constraints.
 """
-function write_NQC(path::AbstractString, inputs::Dict, setup::Dict, EP::Model)
+function write_NQC(path::AbstractString, inputs::Dict, setup::Dict, EP::AbstractModel)
     df_NQC=inputs["NQC_derate"]
     resource_names = inputs["RESOURCE_NAMES"]
 

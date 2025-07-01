@@ -15,10 +15,10 @@ function get_elcc_multiplier(df_elcc_multipliers,elcc_surface_names,resource_nam
 end
 
 @doc raw"""
-	capres_ELCC!(EP::Model, inputs::Dict, setup::Dict)
+	capres_ELCC!(EP::AbstractModel, inputs::Dict, setup::Dict)
 Model capacity reserve margin with ELCC-type constraints
 """
-function capres_ELCC!(EP::Model, inputs::Dict, setup::Dict)
+function capres_ELCC!(EP::AbstractModel, inputs::Dict, setup::Dict)
     # capacity reserve margin constraint
     @debug "ELCC Module"
     G = inputs["G"]
