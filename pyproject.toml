@@ -5,17 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "azure-eventgrid>=4.22.0",
-    "azure-functions>=1.23.0",
-    "azure-identity>=1.23.0",
-    "azure-mgmt-containerinstance>=10.1.0",
-    "azure-mgmt-storage>=21.0.0",
-    "azure-storage-blob>=12.25.1",
     "black[jupyter]>=25.1.0",
+    "ipyfilechooser>=0.6.0",
     "joblib>=1.5.1",
     "jupyter>=1.1.1",
     "loguru>=0.7.3",
-    "marimo>=0.14.0",
     "matplotlib>=3.10.3",
     "nbstripout>=0.8.1",
     "pandas>=2.2.3",
@@ -25,15 +19,7 @@ dependencies = [
     "pytest-mock>=3.14.1",
     "requests>=2.32.3",
     "streamlit>=1.45.1",
+    "tqdm>=4.67.1",
     "universal-pathlib>=0.2.6",
     "xlwings>=0.33.14",
 ]
-
-[tool.marimo.runtime]
-pythonpath = ["src"]
-
-[tool.marimo.display]
-custom_css = ["resilient-transition.css"]
-
-[tool.marimo.server]
-browser = "chrome"
