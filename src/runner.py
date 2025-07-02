@@ -481,6 +481,38 @@ pio.templates["2.5x7.5"] = go.layout.Template(
 
 pio.templates.default = "core+2.5x7.5"
 
+color_map = {
+    "Coal": "black",
+    "Gas Other": "#434343",
+    "Gas CCGT": "#7F7F7F",
+    "Gas CT": "#BFBFBF",
+    "Nuclear": "#FF8AD8",
+    "Biogas": "#7F4910",
+    "Hydro": "#0070C0",
+    "Wind": "#76F2FF",
+    "Solar": "#FFC000",
+    "4-hr Battery": "#7030A0",
+    "8-hr Battery": "#7030A0",
+    "100-hr Battery": "#002060",
+    "Capacity Purchase": "#C00000",
+}
+
+pattern_shape_map = {
+    "Coal": "",
+    "Gas Other": "",
+    "Gas CCGT": "",
+    "Gas CT": "",
+    "Nuclear": "",
+    "Biogas": "",
+    "Hydro": "",
+    "Wind": "",
+    "Solar": "",
+    "4-hr Battery": "",
+    "8-hr Battery": "",
+    "100-hr Battery": "/",
+    "Capacity Purchase": "/",
+}
+
 # Multiprocessing guard for Windows compatibility
 if __name__ == "__main__":
     pass
