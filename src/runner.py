@@ -22,7 +22,7 @@ logger.add(sys.stderr, backtrace=False)
 
 def get_solved_cases(folder: UPath):
     """Get folders with results."""
-    return sorted(p for p in folder.rglob("*") if p.is_dir() and (p / "results").exists())
+    return sorted(p for p in folder.rglob("*") if p.is_dir() and (p / "results" / "capacities_multi_stage.csv").exists())
 
 def save_case(wb: xw.Book, base_folder: UPath, case_subfolder: str | None = None):
     # Get CSV names as a nested dictionary (since some CSVs have been split into multiple separate tables
