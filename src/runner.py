@@ -199,7 +199,7 @@ def save_multistage_case(*, wb: xw.Book):
 
     return base_folder
 
-def load_case_results(*, wb: xw.Book, base_folder: UPath, report_wb: xw.Book | None = None, save_view: bool = True):
+def load_case_results(*, wb: xw.Book, base_folder: UPath, save_view: bool = True, report_wb_template_path: os.PathLike | None = None):
     if (base_folder / "planning_periods.csv").exists():
         periods_range = (
             pd.read_csv(base_folder / "planning_periods.csv", index_col=-1)["Planning Period"].astype("int").to_dict()
@@ -225,7 +225,6 @@ def load_case_results(*, wb: xw.Book, base_folder: UPath, report_wb: xw.Book | N
     wb.sheets["GenX Results"].range("capacities_multi_stage").clear_contents()
     wb.sheets["GenX Results"].range("capacities_multi_stage").value = portfolio.round(3)
 
-
     # Costs
     costs = (pd.read_csv(base_folder / "results" / "costs_multi_stage.csv", index_col=0) / 1e6).round(3)
     costs = costs.rename(
@@ -234,12 +233,10 @@ def load_case_results(*, wb: xw.Book, base_folder: UPath, report_wb: xw.Book | N
     wb.sheets["GenX Results"].range("costs_multi_stage").clear_contents()
     wb.sheets["GenX Results"].range("costs_multi_stage").value = costs
 
-
     # Builds
     def get_net_build(path):
         df = pd.read_csv(path / "capacity.csv", index_col=0)[["NewCap", "RetCap"]]
         return df["NewCap"] - df["RetCap"]
-
 
     builds = pd.concat({period: get_net_build(path) for path, period in periods_range.items()}, axis=1).round(3)
     wb.sheets["GenX Results"].range("capacities").clear_contents()
@@ -267,12 +264,14 @@ def load_case_results(*, wb: xw.Book, base_folder: UPath, report_wb: xw.Book | N
     wb.sheets["GenX Results"].range("generation").clear_contents()
     wb.sheets["GenX Results"].range("generation").value = generation
 
-
     wb.sheets["GenX Results"].activate()
     wb.app.calculate()
 
     # Save copy of sheet
     if save_view:
+        assert report_wb_template_path is not None, "`report_wb_template_path` must be provided to save results view"
+
+        report_wb = xw.Book(report_wb_template_path)
         wb.sheets["GenX Results"].copy(after=report_wb.sheets[0])
         new_name = base_folder.stem[:31]  # Use the case name as the sheet name, limited to 32 characters
         report_wb.sheets["GenX Results"].name = new_name
@@ -280,6 +279,8 @@ def load_case_results(*, wb: xw.Book, base_folder: UPath, report_wb: xw.Book | N
         # Save values only (break external links)
         report_wb.sheets[new_name].range("A1:FU250").copy()
         report_wb.sheets[new_name].range("A1:FU250").paste("values")
+
+        return report_wb
 
     print(f"Loaded results at: {datetime.now()}")
 
