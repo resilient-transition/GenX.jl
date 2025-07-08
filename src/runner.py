@@ -264,6 +264,18 @@ def load_case_results(*, wb: xw.Book, base_folder: UPath, save_view: bool = True
     wb.sheets["GenX Results"].range("generation").clear_contents()
     wb.sheets["GenX Results"].range("generation").value = generation
 
+    # Emissions
+    emissions = (
+        pd.concat(
+            {period: pd.read_csv(path / "emissions_plant.csv", index_col=0).T["AnnualSum"] for path, period in periods_range.items()},
+            axis=1,
+        )
+        / 1e6
+    ).round(3)
+    wb.sheets["GenX Results"].range("emissions").clear_contents()
+    wb.sheets["GenX Results"].range("emissions").value = emissions
+
+
     wb.sheets["GenX Results"].activate()
     wb.app.calculate()
 
@@ -557,18 +569,33 @@ def run_case_with_logging(cmd, case_folder):
     return proc.returncode, case_folder, str(log_file)
 
 
-def tail_logs(case_folders, stop_event):
-    """Tail all log files and print to notebook"""
+def tail_logs(case_folders, stop_event, n_lines=10):
+    """Tail all log files and print to notebook
+    
+    Args:
+        case_folders: List of case folder paths
+        stop_event: Threading event to stop tailing
+        n_lines: Number of lines to keep in output (default: 10)
+    """
     log_positions = {}
     log_file_sizes = {}
+    log_lines_cache = {}
     
-    # Initialize log positions and file sizes
+    # Initialize log positions, file sizes, and line caches
     for folder in case_folders:
         case_name = UPath(folder).stem
         log_positions[case_name] = 0
         log_file_sizes[case_name] = 0
+        log_lines_cache[case_name] = []
     
     while not stop_event.is_set():
+        # Clear the output and print current lines for all cases
+        from IPython.display import clear_output
+        clear_output(wait=True)
+        
+        # Collect and display lines from all cases
+        all_lines = []
+        
         for folder in case_folders:
             case_folder_path = UPath(folder)
             case_name = case_folder_path.stem
@@ -582,6 +609,7 @@ def tail_logs(case_folders, stop_event):
                     if current_size < log_positions[case_name]:
                         log_positions[case_name] = 0
                         log_file_sizes[case_name] = 0
+                        log_lines_cache[case_name] = []
                     
                     with open(log_file, 'r') as f:
                         f.seek(log_positions[case_name])
@@ -593,25 +621,51 @@ def tail_logs(case_folders, stop_event):
                                 if not (stripped.startswith("=== Starting") or 
                                        stripped.startswith("=== Finished") or
                                        stripped.startswith("ERROR:")):
-                                    if stripped:  # Only print non-empty lines
-                                        print(f"{stripped} [{case_name}]")
+                                    if stripped:  # Only add non-empty lines
+                                        log_lines_cache[case_name].append(stripped)
+                        
+                        # Keep only the last n_lines
+                        if len(log_lines_cache[case_name]) > n_lines:
+                            log_lines_cache[case_name] = log_lines_cache[case_name][-n_lines:]
+                        
                         log_positions[case_name] = f.tell()
                         log_file_sizes[case_name] = current_size
                 except (IOError, OSError):
                     # Log file might be temporarily locked, skip this iteration
                     pass
+            
+            # Add this case's lines to the display with case header
+            if log_lines_cache[case_name]:  # Only add case header if there are lines
+                if all_lines:  # Add empty line before this case if there are already lines from other cases
+                    all_lines.append("")
+                # Create a fixed-width header line (80 characters total)
+                header_text = f"━━━ Case: {case_name} ━━━"
+                remaining_chars = max(0, 80 - len(header_text))
+                header_line = header_text + "━" * remaining_chars
+                all_lines.append(header_line)
+                all_lines.extend(log_lines_cache[case_name])
         
-        time.sleep(0.2)  # Check for new output every 200ms
+        # Print all lines (this will be the only output after clear_output)
+        for line in all_lines:
+            print(line)
 
-def run_cases_with_streaming_logs(case_folders, max_parallel=4):
-    """Run cases with file logging and real-time output streaming"""
+        time.sleep(2)  # Check for new output every 2 seconds
+
+def run_cases_with_streaming_logs(case_folders, max_parallel=4, n_lines=10):
+    """Run cases with file logging and real-time output streaming
+    
+    Args:
+        case_folders: List of case folder paths to run
+        max_parallel: Maximum number of parallel jobs (default: 4)
+        n_lines: Number of lines to keep in output display (default: 10)
+    """
     
     print(f"Starting {len(case_folders)} cases with {max_parallel} workers...")
     print(f"Log files will be written to each case folder")
     
     # Start log tailing thread
     stop_event = threading.Event()
-    tail_thread = threading.Thread(target=tail_logs, args=(case_folders, stop_event))
+    tail_thread = threading.Thread(target=tail_logs, args=(case_folders, stop_event, n_lines))
     tail_thread.start()
     
     start_time = time.time()
