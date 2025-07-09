@@ -142,7 +142,7 @@ def save_multistage_case(*, wb: xw.Book):
         wb.sheets["GenX Settings"].range("settings\\genx_settings.yml").options(pd.DataFrame).value
     # Settings
     logger.info("Saving settings...")
-    base_settings_folder = UPath(__file__) / "__base_settings__"
+    base_settings_folder = UPath(__file__).parents[1] / "__base_settings__"
     if (base_folder / "settings").exists():
         shutil.rmtree(base_folder / "settings")
     shutil.copytree(base_settings_folder, base_folder / "settings")
