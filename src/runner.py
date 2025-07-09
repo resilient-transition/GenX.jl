@@ -142,7 +142,7 @@ def save_multistage_case(*, wb: xw.Book):
         wb.sheets["GenX Settings"].range("settings\\genx_settings.yml").options(pd.DataFrame).value
     # Settings
     logger.info("Saving settings...")
-    base_settings_folder = UPath("/Users/roderick/PycharmProjects/resilient-transition/GenX.jl/__base_settings__")
+    base_settings_folder = UPath(__file__) / "__base_settings__"
     if (base_folder / "settings").exists():
         shutil.rmtree(base_folder / "settings")
     shutil.copytree(base_settings_folder, base_folder / "settings")
@@ -673,7 +673,7 @@ def run_cases_with_streaming_logs(case_folders, max_parallel=4, n_lines=10):
     # Run jobs in parallel
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_parallel) as executor:
         # Prepare commands with proper escaping
-        commands = [f"julia --project=. Run.jl {shlex.quote(str(folder))}" for folder in case_folders]
+        commands = ["julia --project=. Run.jl " + "\"" + f"{str(folder)}" + "\"" for folder in case_folders]
         
         # Submit all jobs
         futures = [
